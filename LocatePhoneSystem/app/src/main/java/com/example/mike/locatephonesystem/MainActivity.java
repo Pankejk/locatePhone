@@ -1,42 +1,49 @@
 package com.example.mike.locatephonesystem;
 
+import android.app.Activity;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.net.wifi.WifiConfiguration;
-import android.net.wifi.WifiInfo;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
-import android.support.v7.app.ActionBarActivity;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 
 
 public class MainActivity extends ActionBarActivity implements SensorEventListener {
-    private SensorManager mSensorManager;
-    private Sensor mSensor;
-    private WifiManager wifiManager;
-    private Integer sensorCounter = 0;
-    private String prepare = "";
-    private List <String> magneticList = null;
-    private List <Float> magnetList = null;
+    private static SensorManager mSensorManager;
+    private static Sensor mSensor;
+    private static WifiManager wifiManager;
+    private static Integer sensorCounter = 0;
+    private static String prepare = "";
+    private static List <String> magneticList = new ArrayList<String>();
+    private static List <Float> magnetList = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,14 +53,15 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         if (mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null){
             // Success! There's a magnetometer.
             String status= "";
-            List<Sensor> mSensor = mSensorManager.getSensorList(Sensor.TYPE_MAGNETIC_FIELD);
-            Integer size = mSensor.size();
-            Float resolution = mSensor.get(0).getResolution();
-            Float range = mSensor.get(0).getMaximumRange();
-            Float power_req = mSensor.get(0).getPower();
-            Integer minDelay = mSensor.get(0).getMinDelay();
-            String vendor = mSensor.get(0).getVendor();
-            Integer version = mSensor.get(0).getVersion();
+            List<Sensor> mmSensor = mSensorManager.getSensorList(Sensor.TYPE_MAGNETIC_FIELD);
+            mSensor = mmSensor.get(0);
+            Integer size = mmSensor.size();
+            Float resolution = mmSensor.get(0).getResolution();
+            Float range = mmSensor.get(0).getMaximumRange();
+            Float power_req = mmSensor.get(0).getPower();
+            Integer minDelay = mmSensor.get(0).getMinDelay();
+            String vendor = mmSensor.get(0).getVendor();
+            Integer version = mmSensor.get(0).getVersion();
             //Integer maxDelay = gravSensors.get(0).getMaxDelay();
             Log.i("INFO", size.toString());
             Log.i("Resolution: ", resolution.toString());
@@ -84,14 +92,17 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             //}
             //Log.i("AP: ", status);
             //Log.i("INFO", "PRZED");
-            //mSensorManager.registerListener(this, mSensor.get(0), SensorManager.SENSOR_DELAY_FASTEST, SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
+            //mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_FASTEST, SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
             //Log.i("INFO", "Za");
             //if (sensorCounter == 100) {
             //    mSensorManager.unregisterListener(this);
            // }
             //magneticList.add("MICHA");
             //magneticList.add("ZAKRZW");
-            sendData(magneticList);
+            //ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
+            //NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+            //sendData();
+            new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
 
             //Log.i("Max delay: ", maxDelay.toString());
         }
@@ -100,20 +111,46 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
     }
 
-    public void sendData(List <String> data){
+    private class HttpAsyncTask extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... urls) {
+            mSensorManager.registerListener((SensorEventListener) this, mSensor, SensorManager.SENSOR_DELAY_FASTEST, SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
+            while(true){
+                if (sensorCounter == 100){
+                    //onPause();
+                    break;
+                }
+            }
+
+            return sendData();
+        }
+        // onPostExecute displays the results of the AsyncTask.
+        @Override
+        protected void onPostExecute(String result) {
+            Toast.makeText(getBaseContext(), "Data Sent!", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    public String sendData(){
         Log.i("Max delay: ", "Weszło");
-        data.add("Michal");
-        data.add("Pawel");
+        magneticList.add("Michalzxc");
+        magneticList.add("Pawel");
         InputStream inputStream = null;
         String result = "";
         try {
 
-            HttpClient httpclient = new DefaultHttpClient();
-            HttpPost httpPost = new HttpPost("192.169.1.26:8080");
+            HttpParams httpParameters = new BasicHttpParams();
+            int timeoutConnection = 4000;
+            HttpConnectionParams.setConnectionTimeout(httpParameters, timeoutConnection);
+            int timeoutSocket = 6000;
+            HttpConnectionParams.setSoTimeout(httpParameters, timeoutSocket);
+            HttpClient httpclient = new DefaultHttpClient(httpParameters);
+            URI absolute = new URI("http://192.168.1.26:81/");
+            HttpPost httpPost = new HttpPost(absolute);
             String json = "";
             JSONObject jsonObject = new JSONObject();
             Integer counter = 0;
-            for (String item : data) {
+            for (String item : magneticList) {
                 jsonObject.accumulate(counter.toString(), item);
                 counter++;
             }
@@ -126,32 +163,36 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             // 5. set json to StringEntity
             StringEntity se = new StringEntity(json);
-
             // 6. set httpPost Entity
             httpPost.setEntity(se);
 
             // 7. Set some headers to inform server about the type of the content
-            httpPost.setHeader("Accept", "application/json");
-            httpPost.setHeader("Content-type", "application/json");
+           // httpPost.setHeader("Accept", "application/json");
+            httpPost.setHeader("content-type", "application/json");
 
             // 8. Execute POST request to the given URL
+           // httpclient.getConnectionManager();
+            Log.i("INFO",json);
+            Log.i("Max delay: ", "Weszło1111");
+            isConnected();
             HttpResponse httpResponse = httpclient.execute(httpPost);
+            Log.i("INFO", httpResponse.toString());
 
             // 9. receive response as inputStream
-            inputStream = httpResponse.getEntity().getContent();
+            //inputStream = httpResponse.getEntity().getContent();
 
             // 10. convert inputstream to string
-            if (inputStream != null){
+            /*if (inputStream != null){
                 result = convertInputStreamToString(inputStream);
             Log.i("SUCCESS: ", result);
             }else
-                result = "Did not work!";
+                result = "Did not work!";*/
             //Log.i("postData", response.getStatusLine().toString());
             //Could do something better with response.
         }catch(Exception e){
             Log.i("InputStream", e.getLocalizedMessage());
         }
-
+        return "";
     }
     private static String convertInputStreamToString(InputStream inputStream) throws IOException {
         BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
@@ -165,7 +206,18 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     }
 
-    @Override
+    public boolean isConnected() {
+        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+        if (networkInfo != null && networkInfo.isConnected()) {
+            Log.i("Info", "Jest polaczenie");
+            return true;
+        }
+        else
+            return false;
+    }
+
+        @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -201,6 +253,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         //magnetList.add(event.values[2]);
         Float tmp = event.values[0];
         Log.i("Magnetyzm: ", tmp.toString());
+        magneticList.add(event.toString());
         sensorCounter ++;
         //sendData(magneticCurrent);
 
