@@ -8,6 +8,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -15,6 +16,9 @@ import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.apache.http.HttpResponse;
@@ -25,34 +29,63 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 
-public class MainActivity extends ActionBarActivity implements SensorEventListener {
+public class MainActivity extends ActionBarActivity implements SensorEventListener, View.OnClickListener {
     private static SensorManager mSensorManager;
     private static Sensor mSensor;
     private static WifiManager wifiManager;
     private static Integer sensorCounter = 0;
-    private static String prepare = "";
-    private static List <String> magneticList = new ArrayList<String>();
-    private static List <Float> magnetList = null;
+    private static Integer wifiCounter = 0;
+    private static List <Float> magneticList = new ArrayList<Float>();
+    private static List<List<ScanResult>> wifiSeen = new ArrayList<List<ScanResult>>();
+    private static List<String> magneticJson = new ArrayList<String>();
+    private static List<String> rssiJson = new ArrayList<String>();
+    //private static List<String> locationMagneticJson = new ArrayList<String>();
+    //private static List<String> locationRssiJson = new ArrayList<String>();
+    List<StringEntity> magneticEntity = null;
+    List<StringEntity> rssiEntity = null;
+    private static Float x = Float.valueOf(0);
+    private static Float y = Float.valueOf(0);
+    private static TextView textView;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Button button = (Button) findViewById(R.id.button);
+        button.setOnClickListener(this);
+        Button button2 = (Button) findViewById(R.id.button2);
+        button2.setOnClickListener(this);
+        Button button3 = (Button) findViewById(R.id.button3);
+        button2.setOnClickListener(this);
+        Button button4 = (Button) findViewById(R.id.button4);
+        button2.setOnClickListener(this);
+        textView = (TextView) findViewById(R.id.textView);
+
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+        wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        /*for (ScanResult item : wifiSeen){
+            Log.i("Info" , item.toString());
+        }*/
+
         if (mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null){
             // Success! There's a magnetometer.
-            String status= "";
+           /* String status= "";
             List<Sensor> mmSensor = mSensorManager.getSensorList(Sensor.TYPE_MAGNETIC_FIELD);
             mSensor = mmSensor.get(0);
             Integer size = mmSensor.size();
@@ -69,7 +102,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             Log.i("Power Requirement: ", power_req.toString());
             Log.i("Min delay: ", minDelay.toString());
             Log.i("Get vendor: ", vendor);
-            Log.i("Get version: ", version.toString());
+            Log.i("Get version: ", version.toString());*/
             //wifi
             //wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
             //WifiInfo wifiInfo = wifiManager.getConnectionInfo();
@@ -96,13 +129,13 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             //Log.i("INFO", "Za");
             //if (sensorCounter == 100) {
             //    mSensorManager.unregisterListener(this);
-           // }
+            // }
             //magneticList.add("MICHA");
             //magneticList.add("ZAKRZW");
             //ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
             //NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
             //sendData();
-            new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
+            //new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
 
             //Log.i("Max delay: ", maxDelay.toString());
         }
@@ -111,18 +144,73 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
     }
 
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case  R.id.button: {
+                magneticList.clear();
+                wifiSeen.clear();
+                textView.clearComposingText();
+                List<Sensor> mmSensor = mSensorManager.getSensorList(Sensor.TYPE_MAGNETIC_FIELD);
+                mSensor = mmSensor.get(0);
+                mSensorManager.registerListener((SensorEventListener) this, mSensor, SensorManager.SENSOR_DELAY_FASTEST, SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
+
+                wifiCounter = 0;
+                sensorCounter = 0;
+                Log.i("INFO", "ZBIERANIE DANYCH");
+                while (true) {
+                    wifiManager.startScan();
+                    wifiSeen.add(wifiManager.getScanResults());
+                    //wifiSeen.get(0).
+                    wifiCounter ++;
+                    if (wifiCounter == 100) {
+                        textView.setText("WIFI z pozycji jest juz sciagniete\n");
+                        break;
+                    }
+
+                    Log.i("INFO", "Parsowanie danych");
+                    try {
+                        prepareJson(x, y, 1);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+                break;
+                //new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
+                // do something for button 1 click
+            }
+
+            case R.id.button2: {
+                // do something for button 2 click
+                //preapreStringEntity();
+                sendData();//new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");//sendData();
+                break;
+            }
+
+            case R.id.button3:{
+                x +=1;
+            }
+            case R.id.button4:{
+                y +=2;
+            }
+        }
+    }
+
     private class HttpAsyncTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... urls) {
-            mSensorManager.registerListener((SensorEventListener) this, mSensor, SensorManager.SENSOR_DELAY_FASTEST, SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
-            while(true){
-                if (sensorCounter == 100){
-                    //onPause();
-                    break;
-                }
-            }
+            //List<Sensor> mmSensor = mSensorManager.getSensorList(Sensor.TYPE_MAGNETIC_FIELD);
+           // mSensor = mmSensor.get(0);
+            //mSensorManager.registerListener((SensorEventListener) this, mSensor, SensorManager.SENSOR_DELAY_FASTEST, SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
+           // while(true){
+           //     if (sensorCounter == 100){
+                    //mSensorManager.unregisterListener((SensorEventListener) this);//onPause();
+            //        break;
+            //    }
+           // }
 
-            return sendData();
+
+            sendData();
+            return "";
         }
         // onPostExecute displays the results of the AsyncTask.
         @Override
@@ -131,52 +219,146 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
     }
 
+    public void prepareJson(Float x, Float y, Integer choice) throws JSONException {
+        JSONObject jsonObject = new JSONObject();
+        String tmp ="";
+        if (choice == 0) {
+            for (Float item : magneticList) {
+                    tmp += item.toString() + "%";
+
+            }
+
+        } else if (choice == 1){
+            for (List<ScanResult> item : wifiSeen) {
+                for (ScanResult record : item){
+                    tmp += item.toString() + "%";
+                    }
+                }
+        }
+
+
+        jsonObject.accumulate("x", x);
+        jsonObject.accumulate("y", y);
+        jsonObject.accumulate("data", tmp);
+        if (choice == 1){
+            magneticJson.add(jsonObject.toString());
+        } else if (choice == 2){
+            rssiJson.add(jsonObject.toString());
+
+        }
+        Log.i("INFO", "JSONY GOTOWE");
+
+    }
+
+    public void preapreStringEntity(){
+
+        try {
+            for(String item : magneticJson){
+                Log.i("Max delay: ", "!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                magneticEntity.add(new StringEntity(item));
+            }
+            for(String item : rssiJson){
+            Log.i("Max delay: ", "?????????????????????????????");
+                rssiEntity.add(new StringEntity(item));
+            }
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        Log.i("Max delay: ", "String entity gotowe");
+    }
+
+    public StringEntity prepareStringEntity(String tmp){
+
+        StringEntity en = null;
+        try {
+            en = new StringEntity(tmp);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
+        return en;
+
+    }
+
     public String sendData(){
         Log.i("Max delay: ", "Weszło");
-        magneticList.add("Michalzxc");
-        magneticList.add("Pawel");
+        //magneticList.add("Michalzxc");
+        //magneticList.add("Pawel");
         InputStream inputStream = null;
         String result = "";
         try {
 
             HttpParams httpParameters = new BasicHttpParams();
             int timeoutConnection = 4000;
+            Log.i("Max delay: ", "11111111111");
             HttpConnectionParams.setConnectionTimeout(httpParameters, timeoutConnection);
             int timeoutSocket = 6000;
+            Log.i("Max delay: ", "2222222222222222");
             HttpConnectionParams.setSoTimeout(httpParameters, timeoutSocket);
+            Log.i("Max delay: ", "3333333333333333333");
             HttpClient httpclient = new DefaultHttpClient(httpParameters);
             URI absolute = new URI("http://192.168.1.26:81/");
-            HttpPost httpPost = new HttpPost(absolute);
-            String json = "";
-            JSONObject jsonObject = new JSONObject();
-            Integer counter = 0;
+            Log.i("Max delay: ", "44444444444444444444444");
+            //String json = "";
+            /*JSONObject jsonObject = new JSONObject();
             for (String item : magneticList) {
                 jsonObject.accumulate(counter.toString(), item);
-                counter++;
-            }
+            }*/
             // 4. convert JSONObject to JSON to String
-            json = jsonObject.toString();
+            //json = prepareJson();
 
             // ** Alternative way to convert Person object to JSON string usin Jackson Lib
             // ObjectMapper mapper = new ObjectMapper();
             // json = mapper.writeValueAsString(person);
 
             // 5. set json to StringEntity
-            StringEntity se = new StringEntity(json);
+
+            Log.i("Max delay: ", "5555555555555555555555555555");
+            //StringEntity se = new StringEntity(json);
             // 6. set httpPost Entity
-            httpPost.setEntity(se);
+            for (String se : magneticJson){
+                HttpPost httpPost = new HttpPost(absolute);
+                httpPost.setEntity(prepareStringEntity(se));
+                httpPost.setHeader("Accept", "application/json");
+                httpPost.setHeader("content-type", "application/json");
+                Log.i("Max delay: ", "66666666666666666666");
+                if (isConnected()){
+                    HttpResponse httpResponse = httpclient.execute(httpPost);
+                    Log.i("Max delay: ", "777777777777777777777777  ");
+                    Log.i("INFO", httpResponse.toString());
+                }
+
+
+                magneticJson.clear();
+                rssiJson.clear();
+            }
+
+            for (String se : rssiJson) {
+                HttpPost httpPost = new HttpPost(absolute);
+                httpPost.setEntity(prepareStringEntity(se));
+                httpPost.setHeader("Accept", "application/json");
+                httpPost.setHeader("content-type", "application/json");
+                Log.i("Max delay: ", "8888888888888");
+                if (isConnected()) {
+                    HttpResponse httpResponse = httpclient.execute(httpPost);
+                    Log.i("Max delay: ", "999999999999999999999  ");
+                    Log.i("INFO", httpResponse.toString());
+                }
+            }
+
 
             // 7. Set some headers to inform server about the type of the content
            // httpPost.setHeader("Accept", "application/json");
-            httpPost.setHeader("content-type", "application/json");
+            //httpPost.setHeader("content-type", "application/json");
 
             // 8. Execute POST request to the given URL
            // httpclient.getConnectionManager();
-            Log.i("INFO",json);
-            Log.i("Max delay: ", "Weszło1111");
-            isConnected();
-            HttpResponse httpResponse = httpclient.execute(httpPost);
-            Log.i("INFO", httpResponse.toString());
+            //Log.i("INFO",json);
+           // Log.i("Max delay: ", "Weszło1111");
+            //if (isConnected()) {
+            //    HttpResponse httpResponse = httpclient.execute(httpPost);
+            //    Log.i("INFO", httpResponse.toString());
+            //}
 
             // 9. receive response as inputStream
             //inputStream = httpResponse.getEntity().getContent();
@@ -251,13 +433,38 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         //magnetList.add(event.values[0]);
         //magnetList.add(event.values[1]);
         //magnetList.add(event.values[2]);
-        Float tmp = event.values[0];
-        Log.i("Magnetyzm: ", tmp.toString());
-        magneticList.add(event.toString());
-        sensorCounter ++;
+        if (mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null) {
+            List<Float> tmp = new ArrayList<Float>();
+            tmp.add(event.values[0]);
+            tmp.add(event.values[1]);
+            tmp.add(event.values[2]);
+            Log.i("Magnetyzm x : ", tmp.get(0).toString());
+            Log.i("Magnetyzm y : ", tmp.get(1).toString());
+            Log.i("Magnetyzm z : ", tmp.get(2).toString());
+            magneticList.add(tmp.get(0));
+            magneticList.add(tmp.get(1));
+            magneticList.add(tmp.get(2));
+            sensorCounter++;
+            stopMagnetometer();
+        }
         //sendData(magneticCurrent);
 
         // Do something with this sensor value.
+    }
+
+    public void stopMagnetometer(){
+        if (sensorCounter == 100) {
+            mSensorManager.unregisterListener(this);
+            mSensor=null;
+            Integer size = magneticList.size();
+            textView.setText("Pole magnetyczne z pozycji jest juz sciagniete\n");
+            Log.i("INFO", size.toString());
+            try {
+                prepareJson(x, y, 1);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
