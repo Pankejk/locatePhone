@@ -1,5 +1,6 @@
 package com.example.mike.locatephonesystem;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Service;
 import android.content.Context;
@@ -14,7 +15,10 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.IBinder;
+import android.os.SystemClock;
+import android.text.format.Formatter;
 import android.util.ArrayMap;
 import android.util.Log;
 import android.widget.Toast;
@@ -55,32 +59,32 @@ public class GainData extends Service implements SensorEventListener {
     public static final String X_INTENT = "X";
     public static final String Y_INTENT = "Y";
     public static final String PLACE_NAME_INTENT ="PLACE_NAME";
-    private static final Integer DATA_SIZE = 20;
+    private static final Integer DATA_SIZE = 100;
     private static final Integer MAGNETIC_CHOICE = 0;
     private static final Integer RSSI_CHOICE = 1;
-    private static final Map<String,String> CONSTANT_MAGNETIC_JSON = new HashMap();
+    private static final Map<String,String> CONSTANT_JSON = new HashMap();
     static{
         //static fileds in json files
-        Map<String, String> aMap = new HashMap<>();
-        aMap.put("PLACE","PLACE");
-        aMap.put("POSITIONS","POSITIONS");
-        aMap.put("TIMESTAMP","TIMESTAMP");
-        aMap.put("MAGNETIC_DATA","MAGNETIC_DATA");
-        aMap.put("MAGNETIC_AVG_TIME","MAGNETIC_AVG_TIME");
-        aMap.put("IP_PHONE","IP_PHONE");
-        aMap.put("MAC_PHONE","MAC_PHONE");
+        Map<String, String> CONSTANT_MAGNETIC_JSON = new HashMap<>();
+        CONSTANT_JSON.put("PLACE","PLACE");
+        CONSTANT_JSON.put("POSITIONS","POSITIONS");
+        CONSTANT_JSON.put("TIMESTAMP","TIMESTAMP");
+        CONSTANT_JSON.put("MAGNETIC_DATA","MAGNETIC_DATA");
+        CONSTANT_JSON.put("MAGNETIC_AVG_TIME","MAGNETIC_AVG_TIME");
+        CONSTANT_JSON.put("IP_PHONE","IP_PHONE");
+        CONSTANT_JSON.put("MAC_PHONE","MAC_PHONE");
 
-        aMap.put("SSID","SSID");
-        aMap.put("MAC_AP","MAC_AP");
-        aMap.put("RSSI_DATA","RSSI_DATA");
-        aMap.put("RSSI_AVG_TIME","RSSI_AVG_TIME");
+        CONSTANT_JSON.put("SSID","SSID");
+        CONSTANT_JSON.put("MAC_AP","MAC_AP");
+        CONSTANT_JSON.put("RSSI_DATA","RSSI_DATA");
+        CONSTANT_JSON.put("RSSI_AVG_TIME","RSSI_AVG_TIME");
     };
 
-    private List<JSONObject> jsonMagnetic;
-    private List<JSONObject> jsonRssi;
+    private List<JSONObject> jsonMagnetic = new ArrayList<>();
+    private List<JSONObject> jsonRssi = new ArrayList<>();
     private Map<String,String> mapMagneticShema = new HashMap();
     private Map<String,String> mapRssiShema = new HashMap();
-    private List<StringEntity> entityRssi;
+    private List<StringEntity> entity = new ArrayList<>();
     //private List<List<Float>> rawDataMagnetic = new ArrayList();
     //private List<List<Integer>> rawDataRssi = new ArrayList();
     private List<Float> magneticList = new ArrayList<>();
@@ -89,10 +93,11 @@ public class GainData extends Service implements SensorEventListener {
     private List<Map<String, Float>> avgTimeList = new ArrayList();
 
 
+
     private String place_name="DEFAULT";
     private Float x = Float.valueOf(0);
     private Float y = Float.valueOf(0);
-    private Integer phone_ip=0;
+    private String phone_ip="";
     private String phone_mac="";
 
     private Integer printCounter = 0;
@@ -103,13 +108,23 @@ public class GainData extends Service implements SensorEventListener {
     @Override
     public void onCreate() {
         // The service is being created
-        this.context = getBaseContext();  //getApplicationContext();
-        //this.textView = null;// (TextView) findViewById(R.id.textView);
-        this.wifiManager = (WifiManager) context.getSystemService(context.WIFI_SERVICE);;
-        this.mSensorManager = (SensorManager) context.getSystemService(context.SENSOR_SERVICE);
-        List<Sensor> mmSensor = mSensorManager.getSensorList(Sensor.TYPE_MAGNETIC_FIELD);
-        this.mSensor = mmSensor.get(0);
-        //this.place_name = "DEFAULT";
+        this.context = this;
+        Log.i("GAIN DATA: ", context.toString());
+        this.wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        try{
+            this.mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+            if (mSensorManager == null)
+                Log.i("GAIN DATA - ", "MANAGER IS NULL");
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        //List<Sensor> mmSensor = mSensorManager.getSensorList(Sensor.TYPE_MAGNETIC_FIELD);
+        this.mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        if (mSensor == null){
+            Log.i("GAIN DATA - ", "sensor is null");
+        }
+        this.place_name = "DEFAULT";
         this.timeList.add(new ArrayList<Long>());
         this.timeList.add(new ArrayList<Long>());
         this.gainPhoneInfo();
@@ -125,14 +140,20 @@ public class GainData extends Service implements SensorEventListener {
         String msg = "x: "  + x.toString() + "y:" + y.toString() + " PLACE NAME: " + place_name;
         printStep(msg);
 
-        startMagnetometer();
         gainRssi();
+        startMagnetometer();
+
+        return 0;
+    }
+
+    private void afterMagnetometer(){
         measureTimes();
         prepareJson();
         preapreStringEntity();
-        sendData();
+        new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
+        //sendData();
         //resetTables();
-        return 0;
+        stopSelf();
     }
 
 
@@ -177,7 +198,7 @@ public class GainData extends Service implements SensorEventListener {
     }*/
 
     public List<StringEntity> getRssiEntityList() {
-        return this.entityRssi;
+        return this.entity;
     }
 
     public void resetTables(){
@@ -185,7 +206,7 @@ public class GainData extends Service implements SensorEventListener {
             this.jsonMagnetic.clear();
             this.jsonRssi.clear();
             //this.entityMagnetic.clear();
-            this.entityRssi.clear();
+            this.entity.clear();
             //this.rawDataMagnetic.clear();
             //this.rawDataRssi.clear();
             this.magneticList.clear();
@@ -205,24 +226,24 @@ public class GainData extends Service implements SensorEventListener {
     private void setJsonShema(){
 
         //prepare magnetic json shema
-        this.mapMagneticShema.put(CONSTANT_MAGNETIC_JSON.get("PLACE"),"");
-        this.mapMagneticShema.put(CONSTANT_MAGNETIC_JSON.get("POSITIONS"),"");
-        this.mapMagneticShema.put(CONSTANT_MAGNETIC_JSON.get("TIMESTAMP"),"");
-        this.mapMagneticShema.put(CONSTANT_MAGNETIC_JSON.get("MAGNETIC_DATA"),"");
-        this.mapMagneticShema.put(CONSTANT_MAGNETIC_JSON.get("MAGNETIC_AVG_TIME"),"");
-        this.mapMagneticShema.put(CONSTANT_MAGNETIC_JSON.get("IP_PHONE"),"");
-        this.mapMagneticShema.put(CONSTANT_MAGNETIC_JSON.get("MAC_PHONE"),"");
+        this.mapMagneticShema.put(CONSTANT_JSON.get("PLACE"),"");
+        this.mapMagneticShema.put(CONSTANT_JSON.get("POSITIONS"),"");
+        this.mapMagneticShema.put(CONSTANT_JSON.get("TIMESTAMP"),"");
+        this.mapMagneticShema.put(CONSTANT_JSON.get("MAGNETIC_DATA"),"");
+        this.mapMagneticShema.put(CONSTANT_JSON.get("MAGNETIC_AVG_TIME"),"");
+        this.mapMagneticShema.put(CONSTANT_JSON.get("IP_PHONE"),"");
+        this.mapMagneticShema.put(CONSTANT_JSON.get("MAC_PHONE"),"");
 
         //prepare magnetic json shema
-        this.mapRssiShema.put(CONSTANT_MAGNETIC_JSON.get("SSID"),"");
-        this.mapRssiShema.put(CONSTANT_MAGNETIC_JSON.get("MAC_AP"), "");
-        this.mapRssiShema.put(CONSTANT_MAGNETIC_JSON.get("PLACE"), "");
-        this.mapRssiShema.put(CONSTANT_MAGNETIC_JSON.get("POSITIONS"),"");
-        this.mapRssiShema.put(CONSTANT_MAGNETIC_JSON.get("TIMESTAMP"), "");
-        this.mapRssiShema.put(CONSTANT_MAGNETIC_JSON.get("RSSI_DATA"), "");
-        this.mapRssiShema.put(CONSTANT_MAGNETIC_JSON.get("RSSI_AVG_TIME"), "");
-        this.mapRssiShema.put(CONSTANT_MAGNETIC_JSON.get("IP_PHONE"), "");
-        this.mapRssiShema.put(CONSTANT_MAGNETIC_JSON.get("MAC_PHONE"), "");
+        this.mapRssiShema.put(CONSTANT_JSON.get("SSID"),"");
+        this.mapRssiShema.put(CONSTANT_JSON.get("MAC_AP"), "");
+        this.mapRssiShema.put(CONSTANT_JSON.get("PLACE"), "");
+        this.mapRssiShema.put(CONSTANT_JSON.get("POSITIONS"),"");
+        this.mapRssiShema.put(CONSTANT_JSON.get("TIMESTAMP"), "");
+        this.mapRssiShema.put(CONSTANT_JSON.get("RSSI_DATA"), "");
+        this.mapRssiShema.put(CONSTANT_JSON.get("RSSI_AVG_TIME"), "");
+        this.mapRssiShema.put(CONSTANT_JSON.get("IP_PHONE"), "");
+        this.mapRssiShema.put(CONSTANT_JSON.get("MAC_PHONE"), "");
     }
 
     /*public void startGainData(Float x, Float y, String place_name) {
@@ -241,7 +262,6 @@ public class GainData extends Service implements SensorEventListener {
     private void prepareJson() {
         Map<String, String> dataMagneticDict = new HashMap<>();
         List<Map<String, String>> dataRssiDict = new ArrayList<>();
-        List<Set> dataRssiSet = new ArrayList<>();
 
 
         //preaprsing array amp for createing jsonobejct
@@ -253,15 +273,16 @@ public class GainData extends Service implements SensorEventListener {
 
         //prepare json MAGNETIC
         try {
-            Log.i("CONSTANT_MAGNETIC_JSON", CONSTANT_MAGNETIC_JSON.get("PLACE"));
-            Log.i("dataMagneticDict", dataMagneticDict.get("PLACE"));
-            jsonMagneticObject.accumulate(CONSTANT_MAGNETIC_JSON.get("PLACE"),dataMagneticDict.get("PLACE"));
-            jsonMagneticObject.accumulate(CONSTANT_MAGNETIC_JSON.get("POSITIONS"),dataMagneticDict.get("POSITIONS"));
-            jsonMagneticObject.accumulate(CONSTANT_MAGNETIC_JSON.get("TIMESTAMP"),dataMagneticDict.get("TIMESTAMP"));
-            jsonMagneticObject.accumulate(CONSTANT_MAGNETIC_JSON.get("MAGNETIC_DATA"),dataMagneticDict.get("MAGNETIC_DATA"));
-            jsonMagneticObject.accumulate(CONSTANT_MAGNETIC_JSON.get("MAGNETIC_AVG_TIME"),dataMagneticDict.get("MAGNETIC_AVG_TIME"));
-            jsonMagneticObject.accumulate(CONSTANT_MAGNETIC_JSON.get("IP_PHONE"),dataMagneticDict.get("IP_PHONE"));
-            jsonMagneticObject.accumulate(CONSTANT_MAGNETIC_JSON.get("MAC_PHONE"),dataMagneticDict.get("MAC_PHONE"));
+            Log.i("CONSTANT_MAGNETIC_JSON", CONSTANT_JSON.get("PLACE"));
+            //Log.i("dataMagneticDict", dataMagneticDict.get("PLACE"));
+            jsonMagneticObject.accumulate(CONSTANT_JSON.get("PLACE"),dataMagneticDict.get("PLACE"));
+            jsonMagneticObject.accumulate(CONSTANT_JSON.get("POSITIONS"),dataMagneticDict.get("POSITIONS"));
+            jsonMagneticObject.accumulate(CONSTANT_JSON.get("TIMESTAMP"),dataMagneticDict.get("TIMESTAMP"));
+            jsonMagneticObject.accumulate(CONSTANT_JSON.get("MAGNETIC_DATA"),dataMagneticDict.get("MAGNETIC_DATA"));
+            jsonMagneticObject.accumulate(CONSTANT_JSON.get("MAGNETIC_AVG_TIME"),dataMagneticDict.get("MAGNETIC_AVG_TIME"));
+            jsonMagneticObject.accumulate(CONSTANT_JSON.get("IP_PHONE"),dataMagneticDict.get("IP_PHONE"));
+            jsonMagneticObject.accumulate(CONSTANT_JSON.get("MAC_PHONE"),dataMagneticDict.get("MAC_PHONE"));
+            Log.i("MAGNETIC JSONOBJECT -", jsonMagneticObject.toString());
             jsonMagnetic.add(jsonMagneticObject);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -271,15 +292,17 @@ public class GainData extends Service implements SensorEventListener {
         try {
             for (Map<String,String> tmpMap : dataRssiDict ){
                 JSONObject tmpJsonObject = new JSONObject();
-                tmpJsonObject.accumulate(CONSTANT_MAGNETIC_JSON.get("MAC_AP"),tmpMap.get("MAC_AP"));
-                tmpJsonObject.accumulate(CONSTANT_MAGNETIC_JSON.get("SSID"),tmpMap.get("SSID"));
-                tmpJsonObject.accumulate(CONSTANT_MAGNETIC_JSON.get("PLACE"),tmpMap.get("PLACE"));
-                tmpJsonObject.accumulate(CONSTANT_MAGNETIC_JSON.get("POSITIONS"),tmpMap.get("POSITIONS"));
-                tmpJsonObject.accumulate(CONSTANT_MAGNETIC_JSON.get("TIMESTAMP"),tmpMap.get("TIMESTAMP"));
-                tmpJsonObject.accumulate(CONSTANT_MAGNETIC_JSON.get("RSSI_DATA"),tmpMap.get("RSSI_DATA"));
-                tmpJsonObject.accumulate(CONSTANT_MAGNETIC_JSON.get("RSSI_AVG_TIME"),tmpMap.get("RSSI_AVG_TIME"));
-                tmpJsonObject.accumulate(CONSTANT_MAGNETIC_JSON.get("IP_PHONE"),tmpMap.get("IP_PHONE"));
-                tmpJsonObject.accumulate(CONSTANT_MAGNETIC_JSON.get("MAC_PHONE"),tmpMap.get("MAC_PHONE"));
+                tmpJsonObject.accumulate(CONSTANT_JSON.get("MAC_AP"),tmpMap.get("MAC_AP"));
+                tmpJsonObject.accumulate(CONSTANT_JSON.get("SSID"),tmpMap.get("SSID"));
+                tmpJsonObject.accumulate(CONSTANT_JSON.get("PLACE"),tmpMap.get("PLACE"));
+                tmpJsonObject.accumulate(CONSTANT_JSON.get("POSITIONS"),tmpMap.get("POSITIONS"));
+                tmpJsonObject.accumulate(CONSTANT_JSON.get("TIMESTAMP"),tmpMap.get("TIMESTAMP"));
+                tmpJsonObject.accumulate(CONSTANT_JSON.get("RSSI_DATA"),tmpMap.get("RSSI_DATA"));
+                tmpJsonObject.accumulate(CONSTANT_JSON.get("RSSI_AVG_TIME"),tmpMap.get("RSSI_AVG_TIME"));
+                tmpJsonObject.accumulate(CONSTANT_JSON.get("IP_PHONE"),tmpMap.get("IP_PHONE"));
+                tmpJsonObject.accumulate(CONSTANT_JSON.get("MAC_PHONE"), tmpMap.get("MAC_PHONE"));
+
+                Log.i("RSSI JSONOBJECT", tmpJsonObject.toString());
                 jsonRssi.add(tmpJsonObject);
             }
         } catch (JSONException e) {
@@ -292,13 +315,15 @@ public class GainData extends Service implements SensorEventListener {
     private void feedHashMap(Map<String,String> mapMagnetic, List<Map<String,String>> mapRssi){
 
         //MAGNETIC MAP
-        mapMagnetic.put(CONSTANT_MAGNETIC_JSON.get("PLACE"),place_name);
-        mapMagnetic.put(CONSTANT_MAGNETIC_JSON.get("POSITIONS"),changePositonsToString());
-        mapMagnetic.put(CONSTANT_MAGNETIC_JSON.get("TIMESTAMP"),timeStamp());
-        mapMagnetic.put(CONSTANT_MAGNETIC_JSON.get("MAGNETIC_DATA"),magneticDataToString());
-        mapMagnetic.put(CONSTANT_MAGNETIC_JSON.get("MAGNETIC_AVG_TIME"), timeToString(MAGNETIC_CHOICE));
-        mapMagnetic.put(CONSTANT_MAGNETIC_JSON.get("IP_PHONE"),phone_ip.toString());
-        mapMagnetic.put(CONSTANT_MAGNETIC_JSON.get("MAC_PHONE"), phone_mac);
+        //Log.i("GAIN DATA - positions - ", changePositonsToString());
+        //Log.i("GAIN DATA - magnetic list -", magneticDataToString());
+        mapMagnetic.put(CONSTANT_JSON.get("PLACE"),place_name);
+        mapMagnetic.put(CONSTANT_JSON.get("POSITIONS"),changePositonsToString());
+        mapMagnetic.put(CONSTANT_JSON.get("TIMESTAMP"),timeStamp());
+        mapMagnetic.put(CONSTANT_JSON.get("MAGNETIC_DATA"),magneticDataToString());
+        mapMagnetic.put(CONSTANT_JSON.get("MAGNETIC_AVG_TIME"), timeToString(MAGNETIC_CHOICE));
+        mapMagnetic.put(CONSTANT_JSON.get("IP_PHONE"), phone_ip.toString());
+        mapMagnetic.put(CONSTANT_JSON.get("MAC_PHONE"), phone_mac);
 
         //RSSI MAP
         prepareRssiMaps(mapRssi);
@@ -306,11 +331,14 @@ public class GainData extends Service implements SensorEventListener {
         //Log.i("GAIN DATA - magneticarray", mapMagnetic.get("POSITIONS"));
         Log.i("mapMagnetic", mapMagnetic.toString());
         Log.i("mapRssi", mapRssi.toString());
+        Integer tmmmp = mapMagnetic.size();
+        Log.i("GAIN DATA - MAGNETIC - SIZE - ", tmmmp.toString());
+        Log.i("GAIN DATA - MAGNETIC - ", mapMagnetic.get("MAGNETIC_DATA"));
     }
 
     private String changePositonsToString(){
 
-        String tmp = "{ x:"+ x.toString() + ",y:" + y.toString() +"}";
+        String tmp = "{ x : "+ x.toString() + ", y : " + y.toString() +" }";
         return tmp;
 
     }
@@ -336,7 +364,7 @@ public class GainData extends Service implements SensorEventListener {
             }
 
         }
-        Log.i("GAIN DATA:", tmp);
+        //Log.i("GAIN DATA:", tmp);
         tmp += "]";
 
         return tmp;
@@ -354,11 +382,15 @@ public class GainData extends Service implements SensorEventListener {
         Map<String,List<Integer>> apDataInteger = new HashMap<>();
         Map<String, Map<String,String>> apDataString = new HashMap<>();
         List<String> uniqueApBSSID = new ArrayList<>();
+        Map<String,Map<String,String>> uniqueSSID = new HashMap<>();
 
         for (List<ScanResult> dataList : apInfoList) {
             for (ScanResult result : dataList) {
                if(!uniqueApBSSID.contains(result.BSSID) ){
                    uniqueApBSSID.add(result.BSSID);
+                   Map<String,String> tmpMap = new HashMap();
+                   tmpMap.put(result.BSSID,result.SSID);
+                   uniqueSSID.put(result.BSSID, tmpMap);
                    apDataInteger.put(result.BSSID,new ArrayList<Integer>());
                }
             }
@@ -391,28 +423,55 @@ public class GainData extends Service implements SensorEventListener {
 
             dataString += "]";
             Map<String,String> tmpMap = new HashMap<>();
-            tmpMap.put(uniqeBSSID,dataString);
+            Log.i("GAIN DATA RSSI LIST - ",dataString);
+            tmpMap.put(uniqeBSSID, dataString);
             apDataString.put(uniqeBSSID,tmpMap);
+            Log.i("DATA BEFORE MAP - ", String.valueOf(apDataString.get(uniqeBSSID)));
         }
 
-        Map<String,String> map = new HashMap<>();
+
+       /* Map<String,String> map = new HashMap<>();
         for (List<ScanResult> dataList : apInfoList) {
             for (ScanResult result: dataList){
-                map.put(CONSTANT_MAGNETIC_JSON.get("MAC_AP"),result.BSSID);
-                map.put(CONSTANT_MAGNETIC_JSON.get("SSID"),result.SSID);
-                map.put(CONSTANT_MAGNETIC_JSON.get("PLACE"),place_name);
-                map.put(CONSTANT_MAGNETIC_JSON.get("POSITIONS"),changePositonsToString());
-                map.put(CONSTANT_MAGNETIC_JSON.get("TIMESTAMP"),timeStamp());
-                map.put(CONSTANT_MAGNETIC_JSON.get("RSSI_DATA"),apDataString.get(result.BSSID).get(result.BSSID));
-                map.put(CONSTANT_MAGNETIC_JSON.get("RSSI_AVG_TIME"),timeToString(RSSI_CHOICE));
-                map.put(CONSTANT_MAGNETIC_JSON.get("IP_PHONE"),phone_ip.toString());
-                map.put(CONSTANT_MAGNETIC_JSON.get("MAC_PHONE"),phone_mac);
+                map.put(CONSTANT_JSON.get("MAC_AP"),result.BSSID);
+                map.put(CONSTANT_JSON.get("SSID"),result.SSID);
+                map.put(CONSTANT_JSON.get("PLACE"),place_name);
+                map.put(CONSTANT_JSON.get("POSITIONS"),changePositonsToString());
+                map.put(CONSTANT_JSON.get("TIMESTAMP"),timeStamp());
+                map.put(CONSTANT_JSON.get("RSSI_DATA"),apDataString.get(result.BSSID).get(result.BSSID));
+                map.put(CONSTANT_JSON.get("RSSI_AVG_TIME"),timeToString(RSSI_CHOICE));
+                map.put(CONSTANT_JSON.get("IP_PHONE"),phone_ip.toString());
+                map.put(CONSTANT_JSON.get("MAC_PHONE"),phone_mac);
 
                 list.add(map);
                 map.clear();
             }
 
+        }*/
+
+
+        for(String uniqeBSSID : uniqueApBSSID){
+
+            Map<String,String> map = new HashMap<>();
+            map.put(CONSTANT_JSON.get("MAC_AP"),uniqeBSSID);
+            map.put(CONSTANT_JSON.get("SSID"),uniqueSSID.get(uniqeBSSID).get(uniqeBSSID));
+            map.put(CONSTANT_JSON.get("PLACE"),place_name);
+            map.put(CONSTANT_JSON.get("POSITIONS"),changePositonsToString());
+            map.put(CONSTANT_JSON.get("TIMESTAMP"),timeStamp());
+            map.put(CONSTANT_JSON.get("RSSI_DATA"),apDataString.get(uniqeBSSID).get(uniqeBSSID));
+            map.put(CONSTANT_JSON.get("RSSI_AVG_TIME"),timeToString(RSSI_CHOICE));
+            map.put(CONSTANT_JSON.get("IP_PHONE"),phone_ip.toString());
+            map.put(CONSTANT_JSON.get("MAC_PHONE"), phone_mac);
+
+            Log.i("DATA AP EACH - ", map.get("RSSI_DATA"));
+            list.add(map);
+            //map.clear();
         }
+
+        Integer tmmmp = list.size();
+        Log.i("MAPRSSI - ", tmmmp.toString());
+        Log.i("DATA RSSSI", list.get(0).get("RSSI_DATA"));
+        //Log.i("DATA 0", list.get(0).get("RSSI DATA"));
         printStep("PARSE MAGNETOMETER END");
     }
 
@@ -423,12 +482,12 @@ public class GainData extends Service implements SensorEventListener {
             for (JSONObject item : jsonMagnetic) {
                 Log.i("GAIN DATA: ", "CREATE MAGNETIC STRING ENTITY");
                 String tmp = item.toString();
-                entityRssi.add(new StringEntity(tmp));
+                entity.add(new StringEntity(tmp));
             }
             for (JSONObject item : jsonRssi) {
                 Log.i("GAIN DATA: ", "CREATE RSSI STRING ENTITY");
                 String tmp = item.toString();
-                entityRssi.add(new StringEntity(tmp));
+                entity.add(new StringEntity(tmp));
             }
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
@@ -440,7 +499,12 @@ public class GainData extends Service implements SensorEventListener {
     private void startMagnetometer() {
 
         printStep("START MAGNETOMETER");
-        mSensorManager.registerListener((SensorEventListener) this, mSensor, SensorManager.SENSOR_DELAY_FASTEST, SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
+        try{
+            mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_FASTEST, SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
 
     }
 
@@ -454,12 +518,15 @@ public class GainData extends Service implements SensorEventListener {
             //rawDataMagnetic.add(magneticList);
             //magneticList.clear();
             //prepareJson(0);
+            afterMagnetometer();
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.KITKAT_WATCH)
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+        Log.i("ON SENSOR CHANGED - ", "MAGNETIC IN");
+        if (mSensor != null) {
             Log.i("GAIN DATA: ", "IN MAGNETIC SENSOR");
             getMagnetic(event);
 
@@ -511,7 +578,8 @@ public class GainData extends Service implements SensorEventListener {
     private void gainPhoneInfo(){
         WifiInfo wInfo = wifiManager.getConnectionInfo();
         phone_mac = wInfo.getMacAddress();
-        phone_ip = wInfo.getIpAddress();
+        Integer tmp = wInfo.getIpAddress();
+        phone_ip = Formatter.formatIpAddress(tmp);
 
     }
 
@@ -567,16 +635,20 @@ public class GainData extends Service implements SensorEventListener {
     }
 
     private class HttpAsyncTask extends AsyncTask<String, Void, String> {
+
         @Override
         protected String doInBackground(String... urls) {
-            sendData();
+            for (StringEntity en : entity){
+                sendData(en);
+           }
+
 
             return  "";
         }
 
     }
 
-    public String sendData(){
+    public String sendData(StringEntity en){
 
         try {
 
@@ -595,9 +667,10 @@ public class GainData extends Service implements SensorEventListener {
 
             HttpPost httpPost = new HttpPost(absolute);
             Log.i("MAIN ACTIVITY: ", "66666666666666666666");
-            for (StringEntity en : entityRssi){
+            /*for (StringEntity en : entity){
                 httpPost.setEntity(en);
-            }
+            }*/
+            httpPost.setEntity(en);
 
             Log.i("MAIN ACTIVITY: ", "7777777777777777777777777777");
             httpPost.setHeader("Accept", "application/json");
@@ -611,10 +684,11 @@ public class GainData extends Service implements SensorEventListener {
                 try {
                     HttpResponse httpResponse = httpclient.execute(httpPost);
                     Log.i("MAIN ACTIVITY: ", httpResponse.toString());
+                    Log.i("MAIN ACTIVITY: ", "rrrrrrrrrrrrrrrrrrrr  ");
                 }catch(Exception ex){
                     ex.printStackTrace();
                 }
-                Log.i("MAIN ACTIVITY: ", "rrrrrrrrrrrrrrrrrrrr  ");
+
                 // Log.i("INFO", httpResponse.toString());
             }
 
