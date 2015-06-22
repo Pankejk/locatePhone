@@ -2,6 +2,7 @@ package com.example.mike.locatephonesystem;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -18,6 +19,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -54,11 +56,16 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private static List<String> rssiJson = new ArrayList<String>();
     //private static List<String> locationMagneticJson = new ArrayList<String>();
     //private static List<String> locationRssiJson = new ArrayList<String>();
-    List<StringEntity> magneticEntity = null;
-    List<StringEntity> rssiEntity = null;
+    List<StringEntity> entityMagnetic = new ArrayList<>();
+    List<StringEntity> entityRssi = new ArrayList<>();
     private static Float x = Float.valueOf(0);
     private static Float y = Float.valueOf(0);
+    private static String place_name = "DEFAULT";
+
     private static TextView textView;
+    private static EditText editText;
+
+    private static GainData dataCollector;
 
 
 
@@ -71,19 +78,22 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         Button button2 = (Button) findViewById(R.id.button2);
         button2.setOnClickListener(this);
         Button button3 = (Button) findViewById(R.id.button3);
-        button2.setOnClickListener(this);
+        button3.setOnClickListener(this);
         Button button4 = (Button) findViewById(R.id.button4);
-        button2.setOnClickListener(this);
+        button4.setOnClickListener(this);
+        Button button5 = (Button) findViewById(R.id.button4);
+        button5.setOnClickListener(this);
         textView = (TextView) findViewById(R.id.textView);
+        editText = (EditText) findViewById(R.id.editText);
 
-        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-
-        wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        //mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        //wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         /*for (ScanResult item : wifiSeen){
             Log.i("Info" , item.toString());
         }*/
 
-        if (mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null){
+        //dataCollector = new GainData(this);
+       // if (mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null){
             // Success! There's a magnetometer.
            /* String status= "";
             List<Sensor> mmSensor = mSensorManager.getSensorList(Sensor.TYPE_MAGNETIC_FIELD);
@@ -138,16 +148,23 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             //new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
 
             //Log.i("Max delay: ", maxDelay.toString());
-        }
-        else {
+       // }
+        //else {
             // Failure! No magnetometer.
-        }
+       // }
     }
 
     public void onClick(View v) {
         switch (v.getId()) {
             case  R.id.button: {
-                magneticList.clear();
+                Intent intent = new Intent(this, GainData.class);
+                intent.putExtra(GainData.X_INTENT,x);
+                intent.putExtra(GainData.Y_INTENT,y);
+                intent.putExtra(GainData.PLACE_NAME_INTENT,place_name);
+
+                startService(intent);
+                //dataCollector.startGainData(x,y, place_name);
+                /*magneticList.clear();
                 wifiSeen.clear();
                 textView.clearComposingText();
                 List<Sensor> mmSensor = mSensorManager.getSensorList(Sensor.TYPE_MAGNETIC_FIELD);
@@ -174,7 +191,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
-                }
+                }*/
                 break;
                 //new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
                 // do something for button 1 click
@@ -184,15 +201,23 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                 // do something for button 2 click
                 //preapreStringEntity();
                 //sendData();//new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");//sendData();
-                new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
+                //entityRssi = dataCollector.getMagneticEntityList();
+                //entityMagnetic = dataCollector.getRssiEntityList();
+                //new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
                 break;
             }
 
             case R.id.button3:{
                 x +=1;
+                break;
             }
             case R.id.button4:{
                 y +=2;
+                break;
+            }
+            case R.id.button5:{
+                this.place_name=editText.getText().toString();
+                break;
             }
         }
     }
@@ -251,7 +276,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         Log.i("INFO", "JSONY GOTOWE");
 
     }
-
+/*
     public void preapreStringEntity(){
 
         try {
@@ -267,7 +292,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             e.printStackTrace();
         }
         Log.i("Max delay: ", "String entity gotowe");
-    }
+    }*/
 
     public StringEntity prepareStringEntity(String tmp){
 
@@ -284,7 +309,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     }
 
     public String sendData(){
-        Log.i("Max delay: ", "Weszło");
+        Log.i("MAIN ACTIVITY ", "Weszło");
         //magneticList.add("Michalzxc");
         //magneticList.add("Pawel");
         InputStream inputStream = null;
@@ -293,15 +318,15 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             HttpParams httpParameters = new BasicHttpParams();
             int timeoutConnection = 4000;
-            Log.i("Max delay: ", "11111111111");
+            Log.i("MAIN ACTIVITY: ", "11111111111");
             HttpConnectionParams.setConnectionTimeout(httpParameters, timeoutConnection);
             int timeoutSocket = 6000;
-            Log.i("Max delay: ", "2222222222222222");
+            Log.i("MAIN ACTIVITY: ", "2222222222222222");
             HttpConnectionParams.setSoTimeout(httpParameters, timeoutSocket);
-            Log.i("Max delay: ", "3333333333333333333");
+            Log.i("MAIN ACTIVITY: ", "3333333333333333333");
             HttpClient httpclient = new DefaultHttpClient();
-            URI absolute = new URI("http://192.168.1.19:81");
-            Log.i("Max delay: ", "44444444444444444444444");
+            URI absolute = new URI("http://192.168.1.31:8080");
+            Log.i("MAIN ACTIVITY: ", "44444444444444444444444");
             //String json = "";
             /*JSONObject jsonObject = new JSONObject();
             for (String item : magneticList) {
@@ -316,7 +341,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             // 5. set json to StringEntity
 
-            Log.i("Max delay: ", "5555555555555555555555555555");
+            /*Log.i("MAIN ACTIVITY: ", "5555555555555555555555555555");
             //StringEntity se = new StringEntity(json);
             // 6. set httpPost Entity
             for (String se : magneticJson){
@@ -324,11 +349,11 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                 httpPost.setEntity(prepareStringEntity(se));
                 httpPost.setHeader("Accept", "application/json");
                 httpPost.setHeader("content-type", "application/json");
-                Log.i("Max delay: ", "66666666666666666666");
+                Log.i("MAIN ACTIVITY: ", "66666666666666666666");
                 if (isConnected()){
                     Log.i("CONTENT",se);
                     HttpResponse httpResponse = httpclient.execute(httpPost);
-                    Log.i("Max delay: ", "777777777777777777777777  ");
+                    Log.i("MAIN ACTIVITY: ", "777777777777777777777777  ");
                     Log.i("INFO", httpResponse.toString());
                 }
 
@@ -342,33 +367,38 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                 httpPost.setEntity(prepareStringEntity(se));
                 httpPost.setHeader("Accept", "application/json");
                 httpPost.setHeader("content-type", "application/json");
-                Log.i("Max delay: ", "8888888888888");
+                Log.i("MAIN ACTIVITY: ", "8888888888888");
                 if (isConnected()) {
                     HttpResponse httpResponse = httpclient.execute(httpPost);
-                    Log.i("Max delay: ", "999999999999999999999  ");
+                    Log.i("MAIN ACTIVITY: ", "999999999999999999999  ");
                     Log.i("INFO", httpResponse.toString());
                 }
+            }*/
+            HttpPost httpPost = new HttpPost(absolute);
+            Log.i("MAIN ACTIVITY: ", "66666666666666666666");
+            httpPost.setEntity(entityMagnetic.get(0));
+            for (StringEntity en : entityRssi){
+                httpPost.setEntity(en);
             }
-            /*HttpPost httpPost = new HttpPost(absolute);
-            Log.i("Max delay: ", "66666666666666666666");
-            httpPost.setEntity(prepareStringEntity(rssiJson.get(0)));
-            Log.i("Max delay: ", "7777777777777777777777777777");
+
+            Log.i("MAIN ACTIVITY: ", "7777777777777777777777777777");
             httpPost.setHeader("Accept", "application/json");
-            Log.i("Max delay: ", "888888888888888888888");
+            Log.i("MAIN ACTIVITY: ", "888888888888888888888");
             httpPost.setHeader("content-type", "application/json");
             //Log.i("POST:" , prepareStringEntity(rssiJson.get(0)).getContent().toString());
-            Log.i("Max delay: ", "999999999999999999999");
+            Log.i("MAIN ACTIVITY: ", "999999999999999999999");
             if (isConnected()){
                 //Log.i("CONTENT",se);
-                Log.i("Max delay: ", "YYYYYYYYYYYYYYYYYYYY");
+                Log.i("MAIN ACTIVITY: ", "YYYYYYYYYYYYYYYYYYYY");
                 try {
                     HttpResponse httpResponse = httpclient.execute(httpPost);
+                    Log.i("MAIN ACTIVITY: ", httpResponse.toString());
                 }catch(Exception ex){
                     ex.printStackTrace();
                 }
-                Log.i("Max delay: ", "rrrrrrrrrrrrrrrrrrrr  ");
+                Log.i("MAIN ACTIVITY: ", "rrrrrrrrrrrrrrrrrrrr  ");
                // Log.i("INFO", httpResponse.toString());
-            }*/
+            }
 
 
             // 7. Set some headers to inform server about the type of the content
@@ -378,7 +408,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             // 8. Execute POST request to the given URL
            // httpclient.getConnectionManager();
             //Log.i("INFO",json);
-           // Log.i("Max delay: ", "Weszło1111");
+           // Log.i("MAIN ACTIVITY: ", "Weszło1111");
             //if (isConnected()) {
             //    HttpResponse httpResponse = httpclient.execute(httpPost);
             //    Log.i("INFO", httpResponse.toString());
@@ -397,6 +427,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             //Could do something better with response.
         }catch(Exception e){
             Log.i("InputStream", "przejebka");
+            e.printStackTrace();
         }
         return "";
     }
@@ -457,7 +488,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         //magnetList.add(event.values[0]);
         //magnetList.add(event.values[1]);
         //magnetList.add(event.values[2]);
-        if (mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null) {
+      //  if (mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null) {
             List<Float> tmp = new ArrayList<Float>();
             tmp.add(event.values[0]);
             tmp.add(event.values[1]);
@@ -470,7 +501,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             magneticList.add(tmp.get(2));
             sensorCounter++;
             stopMagnetometer();
-        }
+        //}
         //sendData(magneticCurrent);
 
         // Do something with this sensor value.
@@ -478,8 +509,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     public void stopMagnetometer(){
         if (sensorCounter == 20) {
-            mSensorManager.unregisterListener(this);
-            mSensor=null;
+           // mSensorManager.unregisterListener(this);
+            //mSensor=null;
             Integer size = magneticList.size();
             textView.setText("Pole magnetyczne z pozycji jest juz sciagniete\n");
             Log.i("INFO", size.toString());
@@ -509,12 +540,12 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     @Override
     protected void onResume() {
         super.onResume();
-        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_FASTEST,  SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
+        //mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_FASTEST,  SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        mSensorManager.unregisterListener(this);
+       // mSensorManager.unregisterListener(this);
     }
 }
