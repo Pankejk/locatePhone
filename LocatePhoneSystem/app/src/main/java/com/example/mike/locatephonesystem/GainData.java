@@ -298,7 +298,6 @@ public class GainData extends Service implements SensorEventListener {
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("MODE"),mode);
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("STEP"),step);
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("PLACE"),dataMagneticDict.get("PLACE"));
-                jsonMagneticObject.accumulate(CONSTANT_JSON.get("POSITIONS"),dataMagneticDict.get("POSITIONS"));
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("TIMESTAMP"),dataMagneticDict.get("TIMESTAMP"));
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("MAGNETIC_DATA"),dataMagneticDict.get("MAGNETIC_DATA"));
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("MAGNETIC_AVG_TIME"),dataMagneticDict.get("MAGNETIC_AVG_TIME"));
@@ -320,7 +319,6 @@ public class GainData extends Service implements SensorEventListener {
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("MAC_AP"),tmpMap.get("MAC_AP"));
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("SSID"),tmpMap.get("SSID"));
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("PLACE"),tmpMap.get("PLACE"));
-                    tmpJsonObject.accumulate(CONSTANT_JSON.get("POSITIONS"),tmpMap.get("POSITIONS"));
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("TIMESTAMP"),tmpMap.get("TIMESTAMP"));
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("RSSI_DATA"),tmpMap.get("RSSI_DATA"));
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("RSSI_AVG_TIME"),tmpMap.get("RSSI_AVG_TIME"));
@@ -545,11 +543,9 @@ public class GainData extends Service implements SensorEventListener {
 
 
     private void stopMagnetometer() {
-        Boolean t = magneticCounter == DATA_SIZE;
-        Log.i("IS TRUE: ", t.toString());
-        Integer tmp = magneticCounter;
-        Log.i("IS TRUE: ", tmp.toString());
-        if (tmp.equals(DATA_SIZE) ) {
+
+        Log.i("IS TRUE: ", magneticCounter.toString());
+        if (magneticCounter.equals(DATA_SIZE) ) {
             mSensorManager.unregisterListener(this);
             mSensor=null;
             Integer size = magneticList.size();
@@ -707,7 +703,8 @@ public class GainData extends Service implements SensorEventListener {
             HttpConnectionParams.setSoTimeout(httpParameters, timeoutSocket);
             Log.i("GAIN ACTIVITY: ", "3333333333333333333");
             HttpClient httpclient = new DefaultHttpClient();
-            URI absolute = new URI("http://192.168.1.40:8080");
+            URI absolute = new URI("http://156.17.42.126:2080");
+            //URI absolute = new URI("http://192.168.1.40:8080");
             Log.i("GAIN ACTIVITY: ", "44444444444444444444444");
 
 
