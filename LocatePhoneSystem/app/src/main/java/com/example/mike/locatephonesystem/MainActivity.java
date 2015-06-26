@@ -1,7 +1,12 @@
 package com.example.mike.locatephonesystem;
 
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -13,6 +18,18 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
+
+import java.net.URI;
+import java.util.List;
 
 
 public class MainActivity extends ActionBarActivity implements View.OnClickListener {
@@ -30,7 +47,7 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     private static EditText editText2;
     private static EditText editText3;
 
-
+    private Intent intent;
 
 
 
@@ -58,10 +75,15 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         button8.setOnClickListener(this);
         Button button9 = (Button) findViewById(R.id.button9);
         button9.setOnClickListener(this);
+        Button button10 = (Button) findViewById(R.id.button10);
+        button10.setOnClickListener(this);
+        Button button11 = (Button) findViewById(R.id.button11);
+        button11.setOnClickListener(this);
 
         editText = (EditText) findViewById(R.id.editText);
         editText2 = (EditText) findViewById(R.id.editText2);
         editText3 = (EditText) findViewById(R.id.editText3);
+
 
 
         //imm.hideSoftInputFromWindow(editText.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
@@ -73,7 +95,6 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     public void onClick(View v) {
         switch (v.getId()) {
             case  R.id.button: {
-                Intent intent = new Intent(this, GainData.class);
                 intent.putExtra(GainData.X_INTENT,x);
                 intent.putExtra(GainData.Y_INTENT,y);
                 intent.putExtra(GainData.PLACE_NAME_INTENT,place_name);
@@ -114,11 +135,18 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
             case R.id.button5:{
                 this.place_name=editText.getText().toString();
                 String tmp = editText3.getText().toString();
-                String  [] tmpList = tmp.split(",");
-                Log.i("MAIN STEP X:", tmpList[0]);
-                Log.i("MAIN STEP Y:", tmpList[1]);
-                this.step_x= Float.valueOf(tmpList[0]);
-                this.step_y = Float.valueOf(tmpList[1]);
+                String[] tmpList = tmp.split(",");
+                if( tmp.equals("")){
+                    Log.i("MAIN STEP X:", String.valueOf(1));
+                    Log.i("MAIN STEP Y:", String.valueOf(1));
+                    this.step_x= Float.valueOf(1);
+                    this.step_y = Float.valueOf(1);
+                }else {
+                    Log.i("MAIN STEP X:", tmpList[0]);
+                    Log.i("MAIN STEP Y:", tmpList[1]);
+                    this.step_x = Float.valueOf(tmpList[0]);
+                    this.step_y = Float.valueOf(tmpList[1]);
+                }
                 String msg = "STEP_X: " + step_x.toString() + " STEP_Y: " + step_y.toString() + " PLACE_NAME: " + place_name;
                 Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
                 break;
@@ -133,7 +161,7 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                 break;
             }
             case R.id.button7:{
-                this.dataSize += 300;
+                this.dataSize += 100;
                 String msg = "data size: " + dataSize.toString();
                 Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
                 break;
@@ -149,6 +177,20 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                 this.dataSize = 100;
                 String msg = "data size: " + dataSize.toString();
                 Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+                break;
+            }
+            case R.id.button10:{
+                new HttpAsyncTask(this).execute("http://hmkcode.appspot.com/jsonservlet");
+                Toast.makeText(this, "SEND DATA", Toast.LENGTH_LONG).show();
+                break;
+            }
+            case R.id.button11:{
+                if (intent != null){
+                    stopService(intent);
+                    intent = null;
+                }
+                intent = new Intent(this, GainData.class);
+                Toast.makeText(this, "NEW INTENT", Toast.LENGTH_LONG).show();
                 break;
             }
         }
@@ -186,5 +228,101 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     @Override
     protected void onPause() {
         super.onPause();
+    }
+
+    private void printMsg(String msg, Context c){
+        Toast.makeText(c, msg, Toast.LENGTH_LONG).show();
+    }
+
+    private class HttpAsyncTask extends AsyncTask<String, Void, String> {
+
+        private Context context=null;
+
+        public HttpAsyncTask(Context c){
+            context = c;
+        }
+        @Override
+        protected String doInBackground(String... urls) {
+
+            Integer counterMsg = 0;
+            String msg = "/" + String.valueOf(GainData.entity.size());
+            for (StringEntity en : GainData.entity){
+                Log.i("GAIN DATA: ", "ASYNCTASK");
+                sendData(en);
+                counterMsg ++;
+                String tmp = "Wysłano: " + counterMsg.toString() + msg;
+                Log.i("ASYNCTASK",tmp);
+                //printMsg(tmp,context);
+
+            }
+
+
+            return  "";
+        }
+
+    }
+
+    public String sendData(StringEntity en){
+
+        try {
+
+
+            HttpParams httpParameters = new BasicHttpParams();
+            int timeoutConnection = 4000;
+            Log.i("GAIN ACTIVITY: ", "11111111111");
+            HttpConnectionParams.setConnectionTimeout(httpParameters, timeoutConnection);
+            int timeoutSocket = 6000;
+            Log.i("GAIN ACTIVITY: ", "2222222222222222");
+            HttpConnectionParams.setSoTimeout(httpParameters, timeoutSocket);
+            Log.i("GAIN ACTIVITY: ", "3333333333333333333");
+            HttpClient httpclient = new DefaultHttpClient();
+            URI absolute = new URI("http://156.17.42.126:2080");
+            //URI absolute = new URI("http://192.168.1.40:8080");
+            Log.i("GAIN ACTIVITY: ", "44444444444444444444444");
+
+
+            HttpPost httpPost = new HttpPost(absolute);
+            Log.i("MAIN ACTIVITY: ", "66666666666666666666");
+            /*for (StringEntity en : entity){
+                httpPost.setEntity(en);
+            }*/
+            httpPost.setEntity(en);
+
+            Log.i("MAIN ACTIVITY: ", "7777777777777777777777777777");
+            httpPost.setHeader("Accept", "application/json");
+            Log.i("MAIN ACTIVITY: ", "888888888888888888888");
+            httpPost.setHeader("content-type", "application/json");
+            //Log.i("POST:" , prepareStringEntity(rssiJson.get(0)).getContent().toString());
+            Log.i("MAIN ACTIVITY: ", "999999999999999999999");
+            if (isConnected()){
+                //Log.i("CONTENT",se);
+                Log.i("MAIN ACTIVITY: ", "YYYYYYYYYYYYYYYYYYYY");
+                try {
+                    HttpResponse httpResponse = httpclient.execute(httpPost);
+                    Log.i("MAIN ACTIVITY: ", httpResponse.toString());
+                    Log.i("MAIN ACTIVITY: ", "rrrrrrrrrrrrrrrrrrrr  ");
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                }
+
+                // Log.i("INFO", httpResponse.toString());
+            }
+
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    public boolean isConnected() {
+        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+        if (networkInfo != null && networkInfo.isConnected()) {
+            Log.i("Info", "Jest polaczenie");
+            return true;
+        }
+        else
+            return false;
     }
 }

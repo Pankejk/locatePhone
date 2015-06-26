@@ -90,7 +90,7 @@ public class GainData extends Service implements SensorEventListener {
 
     private List<JSONObject> jsonMagnetic = new ArrayList<>();
     private List<JSONObject> jsonRssi = new ArrayList<>();
-    private List<StringEntity> entity = new ArrayList<>();
+    public static  List<StringEntity> entity = new ArrayList<>();
     private List<Float> magneticList = new ArrayList<>();
     private List<List<ScanResult>> apInfoList = new ArrayList();
     private List<List<Long>> timeList = new ArrayList<>();
@@ -117,12 +117,17 @@ public class GainData extends Service implements SensorEventListener {
     private Long startTime = Long.valueOf(0);
     private static Integer DATA_SIZE = 100;
 
-    @Override
-    public void onCreate() {
-        // The service is being created
+
+    private void preapreService(){
         this.context = this;
         Log.i("GAIN DATA: ", context.toString());
         this.wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+
+        this.place_name = "DEFAULT";
+        this.timeList.add(new ArrayList<Long>());
+        this.timeList.add(new ArrayList<Long>());
+        this.gainPhoneInfo();
+
         try{
             this.mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
             if (mSensorManager == null)
@@ -136,14 +141,16 @@ public class GainData extends Service implements SensorEventListener {
         if (mSensor == null){
             Log.i("GAIN DATA - ", "sensor is null");
         }
-        this.place_name = "DEFAULT";
-        this.timeList.add(new ArrayList<Long>());
-        this.timeList.add(new ArrayList<Long>());
-        this.gainPhoneInfo();
+    }
+    @Override
+    public void onCreate() {
+        // The service is being created
+        preapreService();
     }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // The service is starting, due to a call to startService()
+        preapreService();
         x =intent.getFloatExtra(X_INTENT, 0);
         y =intent.getFloatExtra(Y_INTENT, 0);
         place_name = intent.getStringExtra(PLACE_NAME_INTENT);
@@ -163,6 +170,7 @@ public class GainData extends Service implements SensorEventListener {
         Log.i("CHECKPOINT", chooseCheckPoint.toString());
         Log.i("DATA SIZE", DATA_SIZE.toString());
 
+
         gainRssi();
         startMagnetometer();
 
@@ -174,11 +182,19 @@ public class GainData extends Service implements SensorEventListener {
         prepareJson();
         preapreStringEntity();
         Log.i("GAIN DATA", "SENDING");
-        new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
+        //new HttpAsyncTask().execute("http://hmkcode.appspot.com/jsonservlet");
         //sendData();
         //resetTables();
         stopSelf();
+
     }
+
+    private void afterMagnetometer_1(){
+        measureTimes();
+        prepareJson();
+        preapreStringEntity();
+    }
+
 
 
     @Override
@@ -337,10 +353,7 @@ public class GainData extends Service implements SensorEventListener {
 
     }
 
-    //THESE FUNCTIONS ARE FOR CREATING JSONOBJECT LISTS
-    private void avgTime(){
-        //Gson gson = new Gson
-    }
+
 
     //function feed Hash Map with data from measurement
     private void feedHashMap(Map<String,String> mapMagnetic, List<Map<String,String>> mapRssi){
@@ -534,7 +547,6 @@ public class GainData extends Service implements SensorEventListener {
         printStep("START MAGNETOMETER");
         try{
             mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_FASTEST, SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
-
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -547,13 +559,14 @@ public class GainData extends Service implements SensorEventListener {
         Log.i("IS TRUE: ", magneticCounter.toString());
         if (magneticCounter.equals(DATA_SIZE) ) {
             mSensorManager.unregisterListener(this);
+            mSensorManager = null;
             mSensor=null;
             Integer size = magneticList.size();
             Log.i("GAIN DATA - INFO", size.toString());
             //rawDataMagnetic.add(magneticList);
             //magneticList.clear();
             //prepareJson(0);
-            afterMagnetometer();
+            afterMagnetometer_1();
         }
     }
 
@@ -673,84 +686,10 @@ public class GainData extends Service implements SensorEventListener {
         measureAvgTime(RSSI_CHOICE);
     }
 
-    private class HttpAsyncTask extends AsyncTask<String, Void, String> {
 
 
-        @Override
-        protected String doInBackground(String... urls) {
-
-            for (StringEntity en : entity){
-                Log.i("GAIN DATA: ","ASYNCTASK");
-                sendData(en);
-           }
 
 
-            return  "";
-        }
 
-    }
-
-    public String sendData(StringEntity en){
-
-        try {
-
-            HttpParams httpParameters = new BasicHttpParams();
-            int timeoutConnection = 4000;
-            Log.i("GAIN ACTIVITY: ", "11111111111");
-            HttpConnectionParams.setConnectionTimeout(httpParameters, timeoutConnection);
-            int timeoutSocket = 6000;
-            Log.i("GAIN ACTIVITY: ", "2222222222222222");
-            HttpConnectionParams.setSoTimeout(httpParameters, timeoutSocket);
-            Log.i("GAIN ACTIVITY: ", "3333333333333333333");
-            HttpClient httpclient = new DefaultHttpClient();
-            URI absolute = new URI("http://156.17.42.126:2080");
-            //URI absolute = new URI("http://192.168.1.40:8080");
-            Log.i("GAIN ACTIVITY: ", "44444444444444444444444");
-
-
-            HttpPost httpPost = new HttpPost(absolute);
-            Log.i("MAIN ACTIVITY: ", "66666666666666666666");
-            /*for (StringEntity en : entity){
-                httpPost.setEntity(en);
-            }*/
-            httpPost.setEntity(en);
-
-            Log.i("MAIN ACTIVITY: ", "7777777777777777777777777777");
-            httpPost.setHeader("Accept", "application/json");
-            Log.i("MAIN ACTIVITY: ", "888888888888888888888");
-            httpPost.setHeader("content-type", "application/json");
-            //Log.i("POST:" , prepareStringEntity(rssiJson.get(0)).getContent().toString());
-            Log.i("MAIN ACTIVITY: ", "999999999999999999999");
-            if (isConnected()){
-                //Log.i("CONTENT",se);
-                Log.i("MAIN ACTIVITY: ", "YYYYYYYYYYYYYYYYYYYY");
-                try {
-                    HttpResponse httpResponse = httpclient.execute(httpPost);
-                    Log.i("MAIN ACTIVITY: ", httpResponse.toString());
-                    Log.i("MAIN ACTIVITY: ", "rrrrrrrrrrrrrrrrrrrr  ");
-                }catch(Exception ex){
-                    ex.printStackTrace();
-                }
-
-                // Log.i("INFO", httpResponse.toString());
-            }
-
-
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-        return "";
-    }
-
-    public boolean isConnected() {
-        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        if (networkInfo != null && networkInfo.isConnected()) {
-            Log.i("Info", "Jest polaczenie");
-            return true;
-        }
-        else
-            return false;
-    }
 
 }
