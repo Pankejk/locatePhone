@@ -31,6 +31,8 @@ import org.apache.http.params.HttpParams;
 import java.net.URI;
 import java.util.List;
 
+import javax.xml.transform.Result;
+
 
 public class MainActivity extends ActionBarActivity implements View.OnClickListener {
 
@@ -43,9 +45,13 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     private static Float step_y = Float.valueOf(1);
     private static Integer dataSize = 100;
 
+    public Integer counterMsg = 0;
+
     private static EditText editText;
     private static EditText editText2;
     private static EditText editText3;
+
+    private static TextView textView;
 
     private Intent intent;
 
@@ -83,6 +89,8 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         editText = (EditText) findViewById(R.id.editText);
         editText2 = (EditText) findViewById(R.id.editText2);
         editText3 = (EditText) findViewById(R.id.editText3);
+
+        textView = (TextView) findViewById(R.id.textView);
 
 
 
@@ -180,7 +188,14 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                 break;
             }
             case R.id.button10:{
-                new HttpAsyncTask(this).execute("http://hmkcode.appspot.com/jsonservlet");
+                String msg = "/" + String.valueOf(GainData.entity.size());
+                for (Integer i =0; i<GainData.entity.size();i++){
+                    new HttpAsyncTask(i).execute("http://hmkcode.appspot.com/jsonservlet");
+                    String tmp = counterMsg.toString() + msg;
+                    textView.setText(tmp);
+                    //Toast.makeText(this, tmp, Toast.LENGTH_LONG).show();
+                }
+
                 Toast.makeText(this, "SEND DATA", Toast.LENGTH_LONG).show();
                 break;
             }
@@ -191,6 +206,8 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                 }
                 intent = new Intent(this, GainData.class);
                 Toast.makeText(this, "NEW INTENT", Toast.LENGTH_LONG).show();
+                counterMsg =0;
+                textView.setText("B");
                 break;
             }
         }
@@ -230,35 +247,33 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         super.onPause();
     }
 
-    private void printMsg(String msg, Context c){
-        Toast.makeText(c, msg, Toast.LENGTH_LONG).show();
-    }
+
 
     private class HttpAsyncTask extends AsyncTask<String, Void, String> {
 
         private Context context=null;
+        private Integer index = 0;
 
-        public HttpAsyncTask(Context c){
-            context = c;
+        public HttpAsyncTask( Integer ind){
+            index = ind;
         }
         @Override
         protected String doInBackground(String... urls) {
 
-            Integer counterMsg = 0;
-            String msg = "/" + String.valueOf(GainData.entity.size());
-            for (StringEntity en : GainData.entity){
+            StringEntity en = GainData.entity.get(index);
+            //for (StringEntity en : GainData.entity){
                 Log.i("GAIN DATA: ", "ASYNCTASK");
                 sendData(en);
-                counterMsg ++;
-                String tmp = "Wysłano: " + counterMsg.toString() + msg;
-                Log.i("ASYNCTASK",tmp);
-                //printMsg(tmp,context);
+                counterMsg ++ ;
+                Log.i("ASYNCTASK", "AFTER");
 
-            }
+
+            //}
 
 
             return  "";
         }
+
 
     }
 
