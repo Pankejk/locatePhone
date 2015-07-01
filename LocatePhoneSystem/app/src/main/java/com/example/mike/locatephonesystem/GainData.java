@@ -29,6 +29,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -243,6 +244,52 @@ public class GainData extends Service implements SensorEventListener {
         }
     }
 
+    private Map<String,JSONArray>  prepareData(){
+
+        Map<String, JSONArray> resultMap = new HashMap<>();
+            Map<String, List<Integer>> integerMap = new HashMap<>();
+            List<String> uniqueApBSSID = new ArrayList<>();
+            for (List<ScanResult> dataList : apInfoList) {
+                for (ScanResult result : dataList) {
+                    if (!uniqueApBSSID.contains(result.BSSID)) {
+                        uniqueApBSSID.add(result.BSSID);
+                        integerMap.put(result.BSSID, new ArrayList<Integer>());
+                    }
+                }
+
+            }
+
+            for (Integer i = 0; i < apInfoList.size(); i++) {
+                for (ScanResult result : apInfoList.get(i)) {
+                    if (uniqueApBSSID.contains(result.BSSID)) {
+                        Map<String, Integer> tmp = new HashMap<>();
+                        List<Integer> tmpList = integerMap.get(result.BSSID);
+                        tmpList.add(result.level);
+                        integerMap.put(result.BSSID, tmpList);
+                    }
+                }
+            }
+
+                for (String uniqueBSSID : uniqueApBSSID) {
+                    List<Integer> tmp = integerMap.get(uniqueBSSID);
+                    JSONArray tmpArray = new JSONArray();
+                    for (Integer rssi : tmp) {
+                        tmpArray.put(rssi);
+                    }
+                    resultMap.put(uniqueBSSID, tmpArray);
+                }
+
+
+            JSONArray jsonArrayM = new JSONArray();
+
+            for (Float magnetic : magneticList){
+                jsonArrayM.put(magnetic);
+            }
+            resultMap.put("MAGNETIC_DATA",jsonArrayM);
+
+
+        return resultMap;
+    }
 
 
 
@@ -257,6 +304,15 @@ public class GainData extends Service implements SensorEventListener {
         JSONObject jsonMagneticObject = new JSONObject();
 
 
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.put(x);
+        jsonArray.put(y);
+
+        Map<String, JSONArray> dataJson = prepareData();
+
+        JSONArray stepArray = new JSONArray();
+        stepArray.put(step.get(0));
+        stepArray.put(step.get(1));
 
         //prepare json MAGNETIC - FEED MAP
 
@@ -267,13 +323,13 @@ public class GainData extends Service implements SensorEventListener {
             try {
                 Log.i("CONSTANT_MAGNETIC_JSON", CONSTANT_JSON.get("PLACE"));
                 //Log.i("dataMagneticDict", dataMagneticDict.get("PLACE"));
-                jsonMagneticObject.accumulate(CONSTANT_JSON.get("DATA_SIZE"),DATA_SIZE.toString());
+                jsonMagneticObject.accumulate(CONSTANT_JSON.get("DATA_SIZE"),DATA_SIZE);
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("MODE"),mode);
-                jsonMagneticObject.accumulate(CONSTANT_JSON.get("STEP"),step);
+                jsonMagneticObject.accumulate(CONSTANT_JSON.get("STEP"),stepArray);
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("PLACE"),dataMagneticDict.get("PLACE"));
-                jsonMagneticObject.accumulate(CONSTANT_JSON.get("POSITIONS"),dataMagneticDict.get("POSITIONS"));
+                jsonMagneticObject.accumulate(CONSTANT_JSON.get("POSITIONS"),jsonArray);
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("TIMESTAMP"),dataMagneticDict.get("TIMESTAMP"));
-                jsonMagneticObject.accumulate(CONSTANT_JSON.get("MAGNETIC_DATA"),dataMagneticDict.get("MAGNETIC_DATA"));
+                jsonMagneticObject.accumulate(CONSTANT_JSON.get("MAGNETIC_DATA"),dataJson.get("MAGNETIC_DATA"));
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("MAGNETIC_AVG_TIME"),dataMagneticDict.get("MAGNETIC_AVG_TIME"));
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("IP_PHONE"),dataMagneticDict.get("IP_PHONE"));
                 jsonMagneticObject.accumulate(CONSTANT_JSON.get("MAC_PHONE"),dataMagneticDict.get("MAC_PHONE"));
@@ -287,15 +343,15 @@ public class GainData extends Service implements SensorEventListener {
             try {
                 for (Map<String,String> tmpMap : dataRssiDict ){
                     JSONObject tmpJsonObject = new JSONObject();
-                    tmpJsonObject.accumulate(CONSTANT_JSON.get("DATA_SIZE"),DATA_SIZE.toString());
+                    tmpJsonObject.accumulate(CONSTANT_JSON.get("DATA_SIZE"),DATA_SIZE);
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("MODE"),mode);
-                    tmpJsonObject.accumulate(CONSTANT_JSON.get("STEP"),step);
+                    tmpJsonObject.accumulate(CONSTANT_JSON.get("STEP"),stepArray);
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("MAC_AP"),tmpMap.get("MAC_AP"));
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("SSID"),tmpMap.get("SSID"));
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("PLACE"),tmpMap.get("PLACE"));
-                    tmpJsonObject.accumulate(CONSTANT_JSON.get("POSITIONS"),tmpMap.get("POSITIONS"));
+                    tmpJsonObject.accumulate(CONSTANT_JSON.get("POSITIONS"),jsonArray);
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("TIMESTAMP"),tmpMap.get("TIMESTAMP"));
-                    tmpJsonObject.accumulate(CONSTANT_JSON.get("RSSI_DATA"),tmpMap.get("RSSI_DATA"));
+                    tmpJsonObject.accumulate(CONSTANT_JSON.get("RSSI_DATA"),dataJson.get(tmpMap.get("MAC_AP")));
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("RSSI_AVG_TIME"),tmpMap.get("RSSI_AVG_TIME"));
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("IP_PHONE"), tmpMap.get("IP_PHONE"));
                     tmpJsonObject.accumulate(CONSTANT_JSON.get("MAC_PHONE"), tmpMap.get("MAC_PHONE"));
@@ -381,6 +437,7 @@ public class GainData extends Service implements SensorEventListener {
     }
 
     private String changePositonsToString(){
+
 
         String tmp = "[ "+ x.toString() + " , " + y.toString() +" ]";
         return tmp;

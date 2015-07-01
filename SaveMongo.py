@@ -8,6 +8,7 @@ from bson.objectid import ObjectId
 import bson
 from bson.codec_options import CodecOptions
 from bson import json_util
+import simplejson
 
 class SaveMongo(object):
 
@@ -17,48 +18,36 @@ class SaveMongo(object):
 		self.con = MongoClient()
 		self.db_map = self.con.fingerprint
 		self.db_locate = self.con.locate
-		self.db_gain_data = self.con.gain_data
 		self.collection_map = self.db_map['fingerprint']
 		self.collection_locate = self.db_locate['locate']
-		self.collection_received = self.db_gain_data["received_data"]
 		self.jsonKey = ["DATA_SIZE", "MODE", "STEP", "PLACE", "POSITIONS", "TIMESTAMP", "MAGNETIC_DATA", "MAGNETIC_AVG_TIME", "IP_PHONE", "MAC_PHONE"]
 		self.jsonNewKey = {"FILTERED_RSSI_DATA" : "FILTERED_RSSI_DATA", "FILTERED_MAGNETIC_DATA" : "FILTERED_MAGNETIC_DATA"}
 		self.checkPointsCoordinates = {"A" : [0,0], "B" : [0,0], "C" : [0,0], "D" : [0,0], "E" : [0,0], "F" : [0,0], "G" : [0,0], "H" : [0,0], "I" : [0,0], "J" : [0,0], "K" : [0,0], "L" :[0,0], "M" : [0,0], "N" : [0,0], "O" : [0,0], "P" : [0,0], "R" : [0,0], "S" : [0,0], "T" : [0,0], "U" : [0,0],"ERROR" : [-1,-1]};
 		self.apCoordinates={}
 
 	def saveData(self,jsonFile):
-		#print type(jsonFile)
+		#j = simplejson.loads(jsonFile['RSSI_DATA'])
 		#print jsonFile
-		con = MongoClient()
-		db = con.gain_data['received_data']
-		collection = db
-		collection.insert(jsonFile)
-		anw = collection.find_one()
-		lista = []
-		print type(anw)
-		for key in self.jsonKey:
-			#print type(anw[key])
-			lista.append(json.loads(anw[key]))
-		print lista
-		self.filterAndStatistics(jsonFile)
+		#for dictonary in jsonFile:
+		#	j = simplejson.loads(dictonary)
+		#	print type(json)
+		#	print json
+		#self.filterAndStatistics(jsonFile)
+		#print jsonFile
 		if jsonFile["MODE"] ==  "FEED_MAP":
-			self.collection_map.insert(dictonary)
+			self.collection_map.insert(jsonFile)
 		elif jsonFile["MODE"] ==  "LOCATE_PHONE":
-			self.collection_locate.insert(dictonary)
+			self.collection_locate.insert(jsonFile)
 
 	def __del__(self):
 		self.con.disconnect()
 
 	def filterData(self, jsonFile):
-		#print jsonFile
-		#uniqueKeys = [j[0] for i in jsonFile for j in i.iteritems()]
-		for i in jsonFile:
-			#print type(i)			
-			#print i
-			for j in i.items():
-				print type(j)
-				print j
-				
+		#uniqueKeys = [j[0] for i in jsonFile for j in i.items()]
+		uniqueKeys = []
+		for key in jsonFile:
+			uniqueKeys.append(key)
+			
 		rawData = []
 		if "RSSI_DATA" in uniqueKeys:
 			rawData = json.loads(jsonFile["RSSI_DATA"])

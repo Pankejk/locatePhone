@@ -36,8 +36,8 @@ import javax.xml.transform.Result;
 
 public class MainActivity extends ActionBarActivity implements View.OnClickListener {
 
-    private static Float x = Float.valueOf(0);
-    private static Float y = Float.valueOf(0);
+    private static Float x = Float.valueOf("0");
+    private static Float y = Float.valueOf("0");
     private static String place_name = "DEFAULT";
     private static String mode = "FEED_MAP";
     private static Integer chooseCheckPoint = 0;
@@ -103,15 +103,19 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     public void onClick(View v) {
         switch (v.getId()) {
             case  R.id.button: {
-                intent.putExtra(GainData.X_INTENT,x);
-                intent.putExtra(GainData.Y_INTENT,y);
-                intent.putExtra(GainData.PLACE_NAME_INTENT,place_name);
-                intent.putExtra(GainData.MODE_INTENT, mode);
-                intent.putExtra(GainData.CHOOSE_CHECKPOINT_INTENT, chooseCheckPoint);
-                intent.putExtra(GainData.STEPX_INTENT, step_x);
-                intent.putExtra(GainData.STEPY_INTENT,step_y);
-                intent.putExtra(GainData.DATA_SIZE_INTENT,dataSize);
-                startService(intent);
+                try {
+                    intent.putExtra(GainData.X_INTENT, x);
+                    intent.putExtra(GainData.Y_INTENT, y);
+                    intent.putExtra(GainData.PLACE_NAME_INTENT, place_name);
+                    intent.putExtra(GainData.MODE_INTENT, mode);
+                    intent.putExtra(GainData.CHOOSE_CHECKPOINT_INTENT, chooseCheckPoint);
+                    intent.putExtra(GainData.STEPX_INTENT, step_x);
+                    intent.putExtra(GainData.STEPY_INTENT, step_y);
+                    intent.putExtra(GainData.DATA_SIZE_INTENT, dataSize);
+                    startService(intent);
+                }catch (Exception ex){
+                    ex.printStackTrace();
+                }
                 break;
 
             }
@@ -291,8 +295,8 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
             HttpConnectionParams.setSoTimeout(httpParameters, timeoutSocket);
             Log.i("GAIN ACTIVITY: ", "3333333333333333333");
             HttpClient httpclient = new DefaultHttpClient();
-            URI absolute = new URI("http://156.17.42.126:2080");
-            //URI absolute = new URI("http://192.168.1.40:8080");
+            //URI absolute = new URI("http://156.17.42.126:2080");
+            URI absolute = new URI("http://192.168.1.15:8080");
             Log.i("GAIN ACTIVITY: ", "44444444444444444444444");
 
 
