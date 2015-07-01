@@ -29,21 +29,26 @@ import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 
 import java.net.URI;
-import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
-import javax.xml.transform.Result;
 
 
 public class MainActivity extends ActionBarActivity implements View.OnClickListener {
+
+    public Random random = new Random();
+    private static final int RANDOM_STR_LENGTH = 12;
+    private static final String _CHAR = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
 
     private static Float x = Float.valueOf("0");
     private static Float y = Float.valueOf("0");
     private static String place_name = "DEFAULT";
     private static String mode = "FEED_MAP";
-    private static Integer chooseCheckPoint = 0;
+    private static String chooseCheckPoint = String.valueOf('a');
     private static Float step_x = Float.valueOf(1);
     private static Float step_y = Float.valueOf(1);
     private static Integer dataSize = 100;
+    private static String hash = "DEFAULT";
 
     public Integer counterMsg = 0;
 
@@ -85,6 +90,8 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         button10.setOnClickListener(this);
         Button button11 = (Button) findViewById(R.id.button11);
         button11.setOnClickListener(this);
+        Button button12 = (Button) findViewById(R.id.button12);
+        button12.setOnClickListener(this);
 
         editText = (EditText) findViewById(R.id.editText);
         editText2 = (EditText) findViewById(R.id.editText2);
@@ -104,6 +111,7 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         switch (v.getId()) {
             case  R.id.button: {
                 try {
+                    counterMsg =0;
                     intent.putExtra(GainData.X_INTENT, x);
                     intent.putExtra(GainData.Y_INTENT, y);
                     intent.putExtra(GainData.PLACE_NAME_INTENT, place_name);
@@ -112,6 +120,7 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                     intent.putExtra(GainData.STEPX_INTENT, step_x);
                     intent.putExtra(GainData.STEPY_INTENT, step_y);
                     intent.putExtra(GainData.DATA_SIZE_INTENT, dataSize);
+                    intent.putExtra(GainData.HASH_INTENT, hash);
                     startService(intent);
                 }catch (Exception ex){
                     ex.printStackTrace();
@@ -164,12 +173,12 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                 break;
             }
             case R.id.button6:{
-                Integer tmp = Integer.valueOf(editText2.getText().toString());
-                if (tmp >=  21)
-                    tmp =20;
+                String tmp = editText2.getText().toString();
+                //if (tmp >=  21)
+                 //   tmp =20;
                 this.chooseCheckPoint = tmp;
-                String msg = "CHECKPOINT: " + GainData.CHECKPOINTS[chooseCheckPoint];
-                Toast.makeText(this, chooseCheckPoint.toString(), Toast.LENGTH_LONG).show();
+                String msg = "CHECKPOINT: " + chooseCheckPoint;
+                Toast.makeText(this, chooseCheckPoint, Toast.LENGTH_LONG).show();
                 break;
             }
             case R.id.button7:{
@@ -194,7 +203,17 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
             case R.id.button10:{
                 String msg = "/" + String.valueOf(GainData.entity.size());
                 for (Integer i =0; i<GainData.entity.size();i++){
-                    new HttpAsyncTask(i).execute("http://hmkcode.appspot.com/jsonservlet");
+                    HttpAsyncTask task = new HttpAsyncTask(i);
+                    task.execute("http://hmkcode.appspot.com/jsonservlet");
+                    try {
+                        Integer tmpCounter = Integer.valueOf(task.get());
+                        counterMsg += tmpCounter;
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    }
                     String tmp = counterMsg.toString() + msg;
                     textView.setText(tmp);
                     //Toast.makeText(this, tmp, Toast.LENGTH_LONG).show();
@@ -212,6 +231,12 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                 Toast.makeText(this, "NEW INTENT", Toast.LENGTH_LONG).show();
                 counterMsg =0;
                 textView.setText("B");
+                break;
+            }
+
+            case R.id.button12:{
+                 hash = getRandomString();
+                Toast.makeText(this,"HASH: " + hash, Toast.LENGTH_LONG).show();
                 break;
             }
         }
@@ -268,14 +293,12 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
             //for (StringEntity en : GainData.entity){
                 Log.i("GAIN DATA: ", "ASYNCTASK");
                 sendData(en);
-                counterMsg ++ ;
                 Log.i("ASYNCTASK", "AFTER");
 
 
             //}
-
-
-            return  "";
+            Integer ret = 1;
+            return  ret.toString();
         }
 
 
@@ -296,7 +319,7 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
             Log.i("GAIN ACTIVITY: ", "3333333333333333333");
             HttpClient httpclient = new DefaultHttpClient();
             //URI absolute = new URI("http://156.17.42.126:2080");
-            URI absolute = new URI("http://192.168.1.15:8080");
+            URI absolute = new URI("http://192.168.1.19:8080");
             Log.i("GAIN ACTIVITY: ", "44444444444444444444444");
 
 
@@ -343,5 +366,27 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         }
         else
             return false;
+    }
+
+    private int getRandomNumber() {
+        int randomInt = 0;
+        randomInt = random.nextInt(_CHAR.length());
+        if (randomInt - 1 == -1) {
+            return randomInt;
+        } else {
+            return randomInt - 1;
+        }
+    }
+    public String getRandomString(){
+
+        StringBuffer randStr = new StringBuffer();
+
+        for (int i = 0; i < RANDOM_STR_LENGTH; i++) {
+
+            int number = getRandomNumber();
+            char ch = _CHAR.charAt(number);
+            randStr.append(ch);
+        }
+        return randStr.toString();
     }
 }

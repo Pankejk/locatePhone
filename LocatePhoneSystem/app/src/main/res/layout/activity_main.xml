@@ -157,4 +157,13 @@
         android:layout_alignBottom="@+id/editText3"
         android:layout_alignEnd="@+id/button9" />
 
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Hash"
+        android:id="@+id/button12"
+        android:layout_alignTop="@+id/button10"
+        android:layout_toStartOf="@+id/button5" />
+
 </RelativeLayout>
