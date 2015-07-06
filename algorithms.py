@@ -42,8 +42,8 @@ class Algorithms(object):
 
         for checkPoint in self.checkPointsLocate[0:1]:
             print 'CHECKPOINT START: ' + checkPoint
-            if checkPoint.isdigit():
-                continue
+            #if checkPoint.isdigit():
+            #    continue
             allLocateDocs = self.collLocate.find({'CHECKPOINT' : checkPoint})
             allLocateDocs = [res for res in allLocateDocs]
             
@@ -77,7 +77,7 @@ class Algorithms(object):
                             diff['HASH'] = docFingerPrint['HASH']
                             diff['MAC_PHONE'] = docFingerPrint['MAC_PHONE']
                             diff['STATISTICS_DIFF'] = {}
-                            statisticsLocate = doc['STATISTICS']
+                            statisticsLocate = docLocate['STATISTICS']
                             statisticsFingerprint = docFingerPrint['STATISTICS']
                             
                             statisticDict = {}
@@ -87,10 +87,11 @@ class Algorithms(object):
                             diff['STATISTICS_DIFF'] = statisticDict
                             diffList.append(diff)
                             #print diffList
-                    elif 'MAGNETIC_DATA' in docLocate.viewkeys() and 'RSSI_DATA' in docFingerPrint.viewkeys():
+                    elif 'MAGNETIC_DATA' in docLocate.viewkeys() and 'MAGNETIC_DATA' in docFingerPrint.viewkeys():
                         print 'MAGNETIC'
-                        statisticsLocate = doc['STATISTICS']
-                        statisticsFingerprint = docFingerPrint['STATISTICS']
+                        print docFingerPrint
+                        statisticsLocate = docLocate['STATISTICS_NORM']
+                        statisticsFingerprint = docFingerPrint['STATISTICS_NORM']
                         diff =  {}
                         diff['FINGERPRINT_MAP'] = 'MAGNETIC'
                         diff['X_FINGERPRINT'] = docFingerPrint['X']
@@ -112,9 +113,9 @@ class Algorithms(object):
                     print 'FINGERPRINT DOCUMENT COMPARE NR: ' + str(countFingerprintDocument) + '/'  + str(len(allFingerprintDocs))
                 countLocateDocument +=1
                 print 'LOCATE DOCUMENT NR: ' + str(countLocateDocument) + '/'  + str(len(allLocateDocs))
-            checkPointDict['DIFF_LIST'] = diffList
+            #checkPointDict['DIFF_LIST'] = diffList
             tmpDict = resultDict[checkPoint]
-            tmpDict['ALL_DIFFERENCE'] = checkPointDict
+            tmpDict['DIFF_LIST'] = diffList
             resultDict[checkPoint] = tmpDict
             print 'CHECKPOINT STOP: ' + checkPoint
             
