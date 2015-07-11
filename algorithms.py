@@ -2,6 +2,7 @@
 
 from pymongo import MongoClient
 import sys
+import operator
 
 
 class Algorithms(object):
@@ -12,20 +13,20 @@ class Algorithms(object):
 
         '''constructor'''
 
-        self.STATISTIC_NAME = ["MEAN" ,"STANDARD_DEVIATION", "MAX", "MIN", "MEDIANA", "MODE", "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50", "PERCENTILE - 70",  "PERCENTILE - 90"]
+        self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE", "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50", "PERCENTILE - 70",  "PERCENTILE - 90"]
         self.x_distinct = None
         self.y_distinct = None
         self.collName = collectionName
         self.fileName = checkPointFile
-        self.numberofNeighbours = numberNeighbours
+        self.numberOfNeighbours = numberNeighbours
         self.conn = MongoClient()
         dbFingerprint = self.conn['fingerprint']
         dbLocate = self.conn['locate']
-        dbResult = self.conn['result']
+        self.dbResult = self.conn['result']
         dbResultBackup = self.conn['result_backup']
         self.collFingerprint = dbFingerprint[self.collName]
         self.collLocate = dbLocate[self.collName]
-        self.collResult = dbResult['result_' + self.collName]
+        #self.collResult = dbResult['result_' + self.collName]
         self.collResultBackup = dbResultBackup[self.collName]
         self.checkPoints = {}
         self.checkPointsLocate = []
@@ -46,6 +47,8 @@ class Algorithms(object):
             tmpDict = {}
             tmpDict['X'] = tmp[1]
             tmpDict['Y'] = tmp[2]
+            tmpDict['RSSI_COUNTER'] = 0
+            tmpDict['USED_AP'] = []
             self.checkPoints[tmp[0]] = tmpDict
         self.checkPointsLocate = self.collLocate.distinct('CHECKPOINT')
         #print self.checkPointsLocate
@@ -83,15 +86,16 @@ class Algorithms(object):
                         #print docFingerPrint
                         if docLocate['MAC_AP'] == docFingerPrint['MAC_AP']:
                             diff = {}
-                            diff['FINGERPRINT_MAP'] = 'AP'
+                            diff['FINGERPRINT_MAP'] = 'RSSI'
                             diff['MAC_AP'] = docFingerPrint['MAC_AP']
                             diff['X_FINGERPRINT'] = docFingerPrint['X']
                             diff['Y_FINGERPRINT'] = docFingerPrint['Y']
                             diff['IP_PHONE'] = docFingerPrint['IP_PHONE']
                             diff['PLACE'] = docFingerPrint['PLACE']
-                            diff['HASH'] = docFingerPrint['HASH']
                             diff['MAC_PHONE'] = docFingerPrint['MAC_PHONE']
                             diff['STATISTICS_DIFF'] = {}
+                            diff['CHECKPOINT'] = checkPoint
+                            diff['CHECKPOINT_CORDINATES'] = [self.checkPoints[checkPoint]['X'],self.checkPoints[checkPoint]['Y']]
                             statisticsLocate = docLocate['STATISTICS']
                             statisticsFingerprint = docFingerPrint['STATISTICS']
 
@@ -101,6 +105,8 @@ class Algorithms(object):
                                 statisticDict[dataStatistic] = tmpDiff
                             diff['STATISTICS_DIFF'] = statisticDict
                             diffList.append(diff)
+                            self.checkPoints[checkPoint]['RSSI_COUNTER'] += 1
+                            self.checkPoints[checkPoint]['USED_AP'].append(docLocate['MAC_AP'])
                             #print diffList
                     elif 'MAGNETIC_DATA' in docLocate.viewkeys() and 'MAGNETIC_DATA' in docFingerPrint.viewkeys():
                         print 'MAGNETIC'
@@ -113,7 +119,8 @@ class Algorithms(object):
                         diff['Y_FINGERPRINT'] = docFingerPrint['Y']
                         diff['IP_PHONE'] = docFingerPrint['IP_PHONE']
                         diff['PLACE'] = docFingerPrint['PLACE']
-                        diff['HASH'] = docFingerPrint['HASH']
+                        diff['CHECKPOINT'] = checkPoint
+                        diff['CHECKPOINT_CORDINATES'] = [self.checkPoints[checkPoint]['X'],self.checkPoints[checkPoint]['Y']]
                         diff['MAC_PHONE'] = docFingerPrint['MAC_PHONE']
                         diff['STATISTICS_DIFF'] = {}
 
@@ -138,34 +145,38 @@ class Algorithms(object):
 
     def findAnwser(self):
         diffDictonary = self.countStatisticalDifference()
-        #load to diffrent db - this is before choosing x and y
+        
         self.collResultBackup.insert(diffDictonary)
 
-        maX = {}#bestDictonary[0]
-        for statisticData in self.STATISTIC_NAME:
+        bestDictonary = []
+        for key, value in self.checkPoints.items():
             tmp = {}
-            tmp['CHOSEN_POINTS'] = []
-            tmp['COUNTED_PONT'] = []
-            tmp['CHECKPOINT'] = ''
-            tmp['CHECKPOINT_COORDINATES'] = []
-            tmp['LOCATION_ERROR'] = []
-            tmp['FINGERPRINT_MAP'] = ''
+            tmp1 = {}
 
-            maX[statisticData] = []
-            maX[statisticData].append(tmp)
+            for x in self.x_distinct:
+                for y in self.y_distinct:
 
-            tmp = {}
-            tmp['MAX'] = 0
-            tmp['MIN'] = 0
-            tmp['AVG'] = 0
-            maX['CONCLUSION_RSSI'] = tmp
+                    tmp['CHECKPOINT'] = key
+                    tmp['CHECKPOINT_COORDINATE'] = value
+                    tmp1['CHECKPOINT'] = key
+                    tmp1['CHECKPOINT_COORDINATE'] = value
 
-            tmp = {}
-            tmp['MAX'] = 0
-            tmp['MIN'] = 0
-            tmp['AVG'] = 0
-            maX['CONCLUSION_MAGNETIC'] = tmp
+                    tmp['X_FINGERPRINT'] = x
+                    tmp['Y_FINGERPRINT'] = y
+                    tmp['FINGERPRINT_MAP'] = 'RSSI'
+                    tmp1['X_FINGERPRINT'] = x
+                    tmp1['Y_FINGERPRINT'] = y
+                    tmp1['FINGERPRINT_MAP'] = 'MAGNETIC'
 
+                for statisticData in self.STATISTIC_NAME:
+                    fieldName = 'DIFFRENCE_'+ statisticData
+                    tmp[fieldName] = 0
+                    bestDictonary.append(tmp)
+                    tmp1[fieldName] = 0
+                    bestDictonary.append(tmp1)
+                print 'JSON PREPARED'
+
+        #complete search count sum of diff for all x,y cooridinates
         for dictonary in diffDictonary:
             if dictonary == '_id':
                 continue
@@ -173,58 +184,120 @@ class Algorithms(object):
                 diffList = diffDictonary[dictonary]['DIFF_LIST']
 
                 #fourBest = [0]
-                bestDictonary = []
-                for x in self.x_distinct:
-                    #print type(x)
-                    for y in self.y_distinct:
 
-                        tmp = {}
-                        tmp['X'] = x
-                        tmp['Y'] = y
-                        tmp['FINGERPRINT_MAP'] = 'AP'
-
-                        tmp1 = {}
-                        tmp1['X'] = x
-                        tmp1['Y'] = y
-                        tmp1['FINGERPRINT_MAP'] = 'MAGNETIC'
-
-                        for statisticData in self.STATISTIC_NAME:
-                            fieldName = 'DIFFRENCE_'+ statisticData
-                            tmp[fieldName] = 0
-                            bestDictonary.append(tmp)
-                            tmp1[fieldName] = 0
-                            bestDictonary.append(tmp1)
-                        print 'JSON PREPARED'
+                diffCounter = 0
                 for diffDict in diffList:
-                    if 'FINGERPRINT_MAP' in diffDict:
-                        for d in bestDictonary:
-                            if d['X'] == diffDict['X'] and d['Y'] == diffDict['Y'] and d['FINGERPRINT_MAP'] == diffDict['FINGERPRINT_MAP']:
-                                for statisticData in self.STATISTIC_NAME:
-                                    fieldName = 'DIFFRENCE_'+ statisticData
-                                    d[fieldName] = d[fieldName] + abs(diffDict['STATISTICS_DIFF'][statisticData])
+                    for d in bestDictonary:
+                        if d['X'] == diffDict['X'] and d['Y'] == diffDict['Y'] and d['FINGERPRINT_MAP'] == diffDict['FINGERPRINT_MAP'] and d['CHECKPOINT'] == diffDict['CHECKPOINT']:
+                            for statisticData in self.STATISTIC_NAME:
+                                fieldName = 'DIFFRENCE_'+ statisticData
+                                d[fieldName] = d[fieldName] + abs(diffDict['STATISTICS_DIFF'][statisticData])
+                                print 'PROGRESS: ' + str(diffCounter) + '/' + str(len(diffDict))
+                        diffCounter += 1
                 print 'COUNT DIFF AFTER'
 
 
-                for statisticData in self.STATISTIC_NAME:
-                    choose = []
-                    tmp = maX[statisticData][0]
-                    tmp['']
-                    for best in bestDictonary:
+        locateRssi = []
+        locateMagnetic  = []
+        for key , value in self.checkPoints.items():
+            tmp = {}
+            tmp['CHECKPOINT'] = key
+            cordiantes = {}
+            cooridnates['X'] = value['X']
+            cooridnates['Y'] = value['Y']
+            tmp['CHECKPOINT_COORDINATES'] = cooridnates
+            tmp['FINGERPRINT_MAP'] = 'RSSI'
+            tmp['RSSI_COUNTER'] = value['RSSI_COUNTER']
+            tmp['USED_AP'] = value['USED_AP']
+            
+            tmp['RESULT'] = {}
+            tmp['CHOSEN_POINTS'] = {}
+            for statisticData in self.STATISTIC_NAME:
+                dic = {}
+                dic['X'] = 0
+                dic['Y'] = 0
+                dic['ERROR'] = {'X': 0, 'Y' : 0}
+                tmp['RESULT'][statisticData] = dic
+                tmp['CHOSEN_POINTS'][statisticData] = []
+            locateRssi.append(tmp)
+        
+        for key, value in self.checkPoints.items():
+            tmp = {}
+            tmp['CHECKPOINT'] = key
+            coordinates = {}
+            coordinates['X'] = value['X']
+            coordinates['Y'] = value['Y']
+            tmp['CHECKPOINT_COORDINATES'] = coordinates
+            tmp['FINGERPRINT_MAP'] = 'MAGNETIC'
+            
+            tmp['RESULT'] = {}
+            tmp['CHOSEN_POINTS'] = {}
+            for statisticData in self.STATISTIC_NAME:
+                dic = {}
+                dic['X'] = 0
+                dic['Y'] = 0
+                dic['ERROR'] = {'X': 0, 'Y' : 0}
+                tmp['RESULT'][statisticData] = dic
+                tmp['CHOSEN_POINTS'][statisticData] = []
+            locateMagnetic.append(tmp)
+        
+        print 'Final json prepared!' 
+        
+        for finalDoc in locateRssi:
+            for best in bestDictonary:
+                if finalDoc['CHECKPOINT'] == best['CHECKPOINT']:
+                    if finalDoc['FINGERPRINT_MAP'] == 'RSSI':
+                        self.kNn(best, finalDoc['CHOSEN_POINTS'])
+                        bestDictonary.remove(best)
+        
+        for finalDoc in locateMagnetic:
+            for best in bestDictonary:
+                if finalDoc['CHECKPOINT'] == best['CHECKPOINT']:
+                    if finalDoc['FINGERPRINT_MAP'] == 'MAGNETIC':
+                        self.kNn(best, finalDoc['CHOSEN_POINTS'])
+        
+        for doc in locateRssi:
+            for statisticData in self.STATISTIC_NAME:
+                tmp = doc['CHOSEN_POINTS'][statisticData]
+                coordinatesList = [0,0]
+                for dic in tmp:
+                    coordinatesList[0] += dic['X']
+                    coordinatesList[0] += dic['Y']
+                coordinateList[0] = coordinateList[0]/float(len(tmp))
+                coordinateList[1] = coordinateList[1]/float(len(tmp))
+                doc['RESULT'][statisticData]['X'] = coordinateList[0]
+                doc['RESULT'][statisticData]['Y'] = coordinateList[1]
+                doc['RESULT'][statisticData]['ERROR']['X'] = doc['CHECKPOINT_COORDINATES']['X'] - doc['RESULT'][statisticData]['X']
+                doc['RESULT'][statisticData]['ERROR']['Y'] = doc['CHECKPOINT_COORDINATES']['Y'] - doc['RESULT'][statisticData]['Y']
+        
+        for doc in locateMagnetic:
+            for statisticData in self.STATISTIC_NAME:
+                tmp = doc['CHOSEN_POINTS'][statisticData]
+                coordinatesList = [0,0]
+                for dic in tmp:
+                    coordinatesList[0] += dic['X']
+                    coordinatesList[0] += dic['Y']
+                coordinateList[0] = coordinateList[0]/float(len(tmp))
+                coordinateList[1] = coordinateList[1]/float(len(tmp))
+                doc['RESULT'][statisticData]['X'] = coordinateList[0]
+                doc['RESULT'][statisticData]['Y'] = coordinateList[1]
+                doc['RESULT'][statisticData]['ERROR']['X'] = doc['CHECKPOINT_COORDINATES']['X'] - doc['RESULT'][statisticData]['X']
+                doc['RESULT'][statisticData]['ERROR']['Y'] = doc['CHECKPOINT_COORDINATES']['Y'] - doc['RESULT'][statisticData]['Y']
+        
+        collName = self.collName+'_KNN:' +str(self.numberOfNeighbours)
+        for doc in locateRssi:
+            coll = self.dbResult[collName]
+            coll.insert(doc)
+        
 
-
-                #maX = d
-                #print maX
-                    #tmp = diffDict['STATISTICS_DIFF']['MEAN']
-                    #best = bestDictonary['STATISTICS_DIFF']['MEAN']
-                    #anwser  = min(tmp,best)
-                    #if (anwser != best):
-                    #bestDictonary = tmp
-
-                    #if tmp >
-                    #mBest = max(tBest)
-                    #if tmp >
-    def kNn(self):
-        pass
+    def kNn(self, doc, dic):
+        for statisticData in self.STATISTIC_NAME:
+            if len(dic[statisticData]) != self.numberOfNeighbours:
+                dic[statisticData].append(doc)
+            else:
+                dic[statisticData] = sorted(dic[statisticData], key=lambda x: x)
+                if maX[statisticData][-1] > doc[fieldName]:
+                    maX[statisticData][-1] = doc
 
     #start all locating algorithms
     def startLocate(self):
