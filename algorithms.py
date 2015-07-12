@@ -34,6 +34,8 @@ class Algorithms(object):
 
         self.x_distinct = self.collFingerprint.distinct('X')
         self.y_distinct = self.collFingerprint.distinct('Y')
+        self.x_distinct.sort()
+        self.y_distinct.sort()
 
     def loadCheckPoints(self):
         with open(self.fileName,'r') as fd:
@@ -59,10 +61,10 @@ class Algorithms(object):
         resultDict = self.checkPoints
 
         #print self.checkPoints.keys()
-        for checkPoint in self.checkPointsLocate[0:1]:
+        for checkPoint in self.checkPointsLocate[0:15]:
             print 'CHECKPOINT START: ' + checkPoint
-            #if checkPoint.isdigit():
-            #    continue
+            if checkPoint.isdigit():
+                continue
             allLocateDocs = self.collLocate.find({'CHECKPOINT' : checkPoint})
             allLocateDocs = [res for res in allLocateDocs]
 
@@ -96,6 +98,7 @@ class Algorithms(object):
                             diff['MAC_PHONE'] = docFingerPrint['MAC_PHONE']
                             diff['STATISTICS_DIFF'] = {}
                             diff['CHECKPOINT'] = checkPoint
+                            #print type(checkPoint)
                             diff['CHECKPOINT_CORDINATES'] = [self.checkPoints[checkPoint]['X'],self.checkPoints[checkPoint]['Y']]
                             statisticsLocate = docLocate['STATISTICS']
                             statisticsFingerprint = docFingerPrint['STATISTICS']
@@ -153,16 +156,20 @@ class Algorithms(object):
         #print self.checkPoints.keys()
         bestDictonary = []
         for key, value in self.checkPoints.items():
-            tmp = {}
-            tmp1 = {}
-
+            #print self.x_distinct
+            #print self.y_distinct
+            #counter = 0
             for x in self.x_distinct:
                 for y in self.y_distinct:
-
+                    tmp = {}
+                    tmp1 = {}
+                    dTmp = {}
+                    dTmp['X'] = value['X']
+                    dTmp['Y'] = value['Y']
                     tmp['CHECKPOINT'] = key
-                    tmp['CHECKPOINT_COORDINATE'] = value
+                    tmp['CHECKPOINT_COORDINATE'] = dTmp
                     tmp1['CHECKPOINT'] = key
-                    tmp1['CHECKPOINT_COORDINATE'] = value
+                    tmp1['CHECKPOINT_COORDINATE'] = dTmp
 
                     tmp['X_FINGERPRINT'] = x
                     tmp['Y_FINGERPRINT'] = y
@@ -174,14 +181,28 @@ class Algorithms(object):
                     for statisticData in self.STATISTIC_NAME:
                         fieldName = 'DIFFRENCE_'+ statisticData
                         tmp[fieldName] = 0
-                        bestDictonary.append(tmp)
                         tmp1[fieldName] = 0
-                        bestDictonary.append(tmp1)
+                    bestDictonary.append(tmp)
+                    bestDictonary.append(tmp1)
+                    #if tmp['CHECKPOINT'] == 'a':
+                    #    print str(tmp['X_FINGERPRINT']) + ' ' + str(tmp['Y_FINGERPRINT'])
+                    #    counter += 1
+        #print 'COUNTER: ' + str(counter)
+        #counter = 0
+
+        #for dic in bestDictonary:
+        #    if dic['CHECKPOINT'] == 'a':
+        #        print len(dic)
+        #        print dic
+        #        break
+                #print str(dic['X_FINGERPRINT']) + ' ' + str(dic['Y_FINGERPRINT'])
+        #        counter += 1
+        #print counter
                 #print 'JSON PREPARED'
-        for dictonary in diffDictonary:
-            if dictonary == 'a':
-                diffList = diffDictonary[dictonary]['DIFF_LIST']
-                print diffList
+        #for dictonary in diffDictonary:
+        #    if dictonary == 'a':
+        #        diffList = diffDictonary[dictonary]['DIFF_LIST']
+        #        print diffList
         #sys.exit('TEMPORARY EXIT')
         #complete search count sum of diff for all x,y cooridinates
         for dictonary in diffDictonary:
@@ -214,7 +235,7 @@ class Algorithms(object):
                     diffCounter += 1
                     print 'PROGRESS: ' + str(diffCounter) + '/' + str(len(diffList))
         print 'COUNT DIFF AFTER'
-        sys.exit('TEMPORARY EXIT')
+        #sys.exit('TEMPORARY EXIT')
         #print self.checkPoints.keys()
         #for key , value in self.checkPoints.items():
         #    if key == '_id':
@@ -281,7 +302,7 @@ class Algorithms(object):
                 if finalDoc['CHECKPOINT'] == best['CHECKPOINT']:
                     if finalDoc['FINGERPRINT_MAP'] == 'MAGNETIC':
                         self.kNn(best, finalDoc['RESULT'])
-
+        print 'AFTER KNN'
         for doc in locateRssi:
             for statisticData in self.STATISTIC_NAME:
                 l = doc['RESULT'][statisticData]['CHOSEN_POINTS']
@@ -354,8 +375,8 @@ class Algorithms(object):
                     dic[statisticData]['CHOSEN_POINTS'].append(doc)
             else:
                 if not self.checkList(dic[statisticData]['CHOSEN_POINTS'],doc):
-                    dic[statisticData]['CHOSEN_POINTS'] = sorted(dic[statisticData]['CHOSEN_POINTS'], key=lambda x: x)
-                    if dic[statisticData]['CHOSEN_POINTS'][-1] > doc[fieldName]:
+                    dic[statisticData]['CHOSEN_POINTS'] = sorted(dic[statisticData]['CHOSEN_POINTS'], key=lambda x: x[fieldName])
+                    if dic[statisticData]['CHOSEN_POINTS'][-1][fieldName] > doc[fieldName]:
                         dic[statisticData]['CHOSEN_POINTS'][-1] = doc
     def checkList(self, tList, doc):
         anws = False
