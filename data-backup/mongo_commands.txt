@@ -1,0 +1,1 @@
+mongoimport --db fingerprint --collection kuznia1_DATASIZE:200_STEP:3_1_DEFAULT --file backup/kuznia1_DATASIZE\:200_STEP\:3_1_DEFAULT_fingerprint_4.07.15.json
