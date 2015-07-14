@@ -16,7 +16,7 @@ def countStatisticsData(jsonFile):
 		#elif "MAGNETIC_DATA" in uniqueKeys: #"FILTERED_MAGNETIC_DATA"
         data = jsonFile['MAGNETIC_DATA_NORM'] #"FILTERED_MAGNETIC_DATA"
         array = np.array(data)
-        #print data 
+        #print data
         meanV = np.mean(data)
         standardDeviation = np.std(data)
         maxV = max(data)
@@ -24,7 +24,7 @@ def countStatisticsData(jsonFile):
         medianaV = np.median(data)
         tmp = list(scipy.stats.mode(data))
         modeV = tmp[0].tolist()[0]
-        
+
         percentile10 = np.percentile(array, 10)
         percentile20 = np.percentile(array, 20)
         percentile50 = np.percentile(array, 50)
@@ -36,13 +36,13 @@ def countStatisticsData(jsonFile):
 
 
 
-os.system('mongoimport --db locate --collection kuznia1_DATASIZE:200_STEP:3_1_DEFAULT --file backup/kuznia1_DATASIZE:200_STEP:3_1_DEFAULT_locate_2.07.15.json')
+os.system('mongoimport --db locate --collection kuznia1_DATASIZE_200_STEP_3_1_DEFAULT --file data-backup/kuznia1_DATASIZE:200_STEP:3_1_DEFAULT_locate_2.07.15.json')
 
 conn = MongoClient()
 
 db_locate = conn['locate']
-distinctLocate = db_locate['kuznia1_DATASIZE:200_STEP:3_1_DEFAULT'].distinct('MAC_AP')
-coll_kuznia = db_locate['kuznia1_DATASIZE:200_STEP:3_1_DEFAULT']
+distinctLocate = db_locate['kuznia1_DATASIZE_200_STEP_3_1_DEFAULT'].distinct('MAC_AP')
+coll_kuznia = db_locate['kuznia1_DATASIZE_200_STEP_3_1_DEFAULT']
 distinctCp = coll_kuznia.distinct('CHECKPOINT')
 
 distinctCp.sort()
@@ -82,7 +82,11 @@ for doc in coll_kuznia.find({}):
     if  'MAGNETIC_DATA' in doc.viewkeys():
         tmp = doc['MAGNETIC_DATA']
         norm = []
-        print 'RAW DATA SIZE: ' +  str(len(tmp))
+        if len(tmp) > 600:
+            tmp = tmp[0:600]
+            doc['MAGNETIC_DATA'] = tmp
+            print 'RAW DATA SIZE: ' +  str(len(tmp))
+            print tmp
         for i in range(0,len(tmp),3):
             norm.append(sqrt(pow(tmp[i],2) + pow(tmp[i+1],2) + pow(tmp[i+2],2)))
         print 'DATA NORM SIZE: ' +  str(len(norm))
@@ -93,11 +97,13 @@ for doc in coll_kuznia.find({}):
 
 print 'AFTER AP DUPLICATION REMOVED: ' + str(coll_kuznia.count({}))
 
+for doc in coll_kuznia.find({}):
+    if doc['CHECKPOINT'] == '0':
+        coll_kuznia.delete_one({'_id' : doc['_id']})
+print 'AFTER ) checkpoint removed: ' + str(coll_kuznia.count({}))
+
 fd = open('kuznia_locate_repair.txt','w')
 for item in infoList:
     if item[-1] > 1:
         fd.write(str(item) + '\n')
 fd.close()
-
-
-
