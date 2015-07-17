@@ -1,7 +1,8 @@
 from pymongo import *
-import statistics
+import scipy.stats#import statistics
 import numpy as np
-from datetime import datetime 
+from datetime import datetime
+from math import sqrt
 
 class SaveMongo(object):
 
@@ -27,9 +28,9 @@ class SaveMongo(object):
 		#	print json
 		#self.filterAndStatistics(jsonFile)
 		#print jsonFile
-		collecton_name = jsonFile['PLACE'] + '_DATASIZE:' +str(jsonFile['DATA_SIZE']) + '_STEP:' + str(jsonFile['STEP'][0]) + '_' + str(jsonFile['STEP'][1])  + '_' + jsonFile['HASH']
+		collecton_name = jsonFile['PLACE'] + '_DATASIZE_' +str(jsonFile['DATA_SIZE'])
 		self.countStatisticsData(jsonFile)
-		if jsonFile["MODE"] ==  "FEED_MAP":		
+		if jsonFile["MODE"] ==  "FEED_MAP":
 			self.db_map[collecton_name].insert(jsonFile)
 		elif jsonFile["MODE"] ==  "LOCATE_PHONE":
 			self.db_locate[collecton_name].insert(jsonFile)
@@ -42,7 +43,7 @@ class SaveMongo(object):
 		uniqueKeys = []
 		for key in jsonFile:
 			uniqueKeys.append(key)
-			
+
 		rawData = []
 		if "RSSI_DATA" in uniqueKeys:
 			rawData = json.loads(jsonFile["RSSI_DATA"])
@@ -57,7 +58,7 @@ class SaveMongo(object):
 			jsonFile[jsonNewKey["FILTERED_RSSI_DATA"]] = filteredData
 		elif "MAGNETIC_DATA" in uniqueKeys:
 			jsonFile[jsonNewKey["FILTERED_MAGNETIC_DATA"]] = filteredData
-		
+
 
 	def cleanNoise(self, per20, per90, data):
 		for i in range(0,len(data)):
@@ -71,16 +72,22 @@ class SaveMongo(object):
 		for key in jsonFile:
 			uniqueKeys.append(key)
 		data = []
+		if 'POSITIONS' in uniqueKeys:
+			tmpP = jsonFile['POSITIONS']
+			jsonFile['X'] = tmpP[0]
+			jsonFile['Y'] = tmpP[1]
+			del jsonFile['POSITIONS']
 		if "RSSI_DATA" in uniqueKeys: # "FILTERED_RSSI_DATA"
 			data = jsonFile["RSSI_DATA"] #"FILTERED_RSSI_DATA"
 		elif "MAGNETIC_DATA" in uniqueKeys: #"FILTERED_MAGNETIC_DATA"
 			data = jsonFile["MAGNETIC_DATA"] #"FILTERED_MAGNETIC_DATA"
-		meanV = statistics.mean(data)
-		standardDeviation = statistics.pstdev(data)
+		meanV = np.mean(data)
+		standardDeviation = np.std(data)
 		maxV = max(data)
 		minV = min(data)
-		medianaV = statistics.median_grouped(data)
-		modeV = statistics.mode(data)
+		medianaV = np.median(data)
+		tmp = list(scipy.stats.mode(data))
+		modeV = tmp[0].tolist()[0]
 		array = np.array(data)
 		percentile10 = np.percentile(array, 10)
 		percentile20 = np.percentile(array, 20)
@@ -90,11 +97,28 @@ class SaveMongo(object):
 		statisticsDict = {"MEAN" : meanV,"STANDARD_DEVIATION" : standardDeviation, "MAX" : maxV, "MIN" : minV, "MEDIANA" : medianaV, "MODE" : modeV,  "PERCENTILE - 10" : percentile10,"PERCENTILE - 20" : percentile20,  "PERCENTILE - 50" : percentile50,  "PERCENTILE - 70" : percentile70,  "PERCENTILE - 90" : percentile90 }
 		jsonFile["STATISTICS"] = statisticsDict
 
+		if "MAGNETIC_DATA" in uniqueKeys:
+			norm = []
+			print 'RAW DATA SIZE: ' +  str(len(data))
+			for i in range(0,len(data),3):
+				norm.append(sqrt(pow(data[i],2) + pow(data[i+1],2) + pow(data[i+2],2)))
+			jsonFile['MAGNETIC_DATA_NORM'] = norm
+			meanV = np.mean(norm)
+			standardDeviation = np.std(norm)
+			maxV = max(norm)
+			minV = min(norm)
+			medianaV = np.median(norm)
+			tmp = list(scipy.stats.mode(norm))
+			modeV = tmp[0].tolist()[0]
+			array = np.array(norm)
+			percentile10 = np.percentile(array, 10)
+			percentile20 = np.percentile(array, 20)
+			percentile50 = np.percentile(array, 50)
+			percentile70 = np.percentile(array, 70)
+			percentile90 = np.percentile(array, 90)
+			statisticsDict = {"MEAN" : meanV,"STANDARD_DEVIATION" : standardDeviation, "MAX" : maxV, "MIN" : minV, "MEDIANA" : medianaV, "MODE" : modeV,  "PERCENTILE - 10" : percentile10,"PERCENTILE - 20" : percentile20,  "PERCENTILE - 50" : percentile50,  "PERCENTILE - 70" : percentile70,  "PERCENTILE - 90" : percentile90 }
+			jsonFile["STATISTICS_NORM"] = statisticsDict
+
 	def filterAndStatistics(self, jsonFile):
 		self.filterData(jsonFile)
 		self.countStatisticsData(jsonFile)
-
-
-
-			
-            
