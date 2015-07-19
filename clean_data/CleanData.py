@@ -15,16 +15,25 @@ class CleanData(object):
         '''distinct values'''
         self.x_distinct = self.coll_fingerprint.distinct('X')
         self.y_distinct = self.coll_fingerprint.distinct('Y')
-        print self.x_distinct
         self.locationCp_distinct = self.coll_locate.distinct('CHECKPOINT')
         self.macAp_fingerprint_distinct = self.coll_fingerprint.distinct('MAC_AP')
         self.macAp_locate_distinct = self.coll_locate.distinct('MAC_AP')
 
     def __del__(self):
         self.conn.close()
-##########################################################################################################
-    '''methods that check if necessary is removing doubuled data or some magnetic documents are missing'''
-##################################################################################################################################################################
+
+    """method shows information about data in fingerprint map and in checkpoint data"""
+    def printInfoAboutData(self):
+        print 'DISCTINCT X COORDINATES: ' + str(self.x_distinct) + ' Length: ' + str(len(self.x_distinct))
+        print 'DISCTINCT Y COORDINATES: ' + str(self.y_distinct) + ' Length: ' + str(len(self.y_distinct))
+        print 'DISTINCT CHECKPOINTS: ' + str(self.locationCp_distinct) + ' Length: ' + str(len(self.locationCp_distinct))
+        print 'DISTINCT APs MAC in fingerprint: ' + str(self.macAp_fingerprint_distinct) + ' Length: ' + str(len(self.macAp_fingerprint_distinct))
+        print 'DISTINCT APs MAC in locate: ' + str(self.macAp_locate_distinct) + ' Length: ' + str(len(self.macAp_locate_distinct))
+        print ''
+##############################################################################
+    '''methods that check if necessary is removing doubuled data
+    or some magnetic documents are missing'''
+###############################################################################
     '''methods for fingerprint db'''
 
     ''' method shows missing magnetic documents in fingerprint map'''
@@ -32,15 +41,15 @@ class CleanData(object):
         cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}})
         docs = [res for res in cursor]
         size = len(self.x_distinct)*len(self.y_distinct)
-        print self.x_distinct
-        print self.y_distinct
+        #print self.x_distinct
+        #print self.y_distinct
         msg = 'Found %s MAGNETIC DOCUMENTS. SHOULD BE: %s' % (len(docs),size)
         print msg
 
         counterList = []
         self.preapreListDictonaryCoordinatesMagneticFingerprint(counterList)
         for doc in docs:
-            for cunterDic in counterList:
+            for counterDic in counterList:
                 if doc['X'] == counterDic['X'] and doc['Y'] == counterDic['Y']:
                     counterDic['COUNTER'] += 1
         print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
@@ -53,12 +62,17 @@ class CleanData(object):
     def isMagneticDoubledFingerprint(self):
         cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}})
         docs = [res for res in cursor]
+        #print len(self.x_distinct)
+        #print ''
+        print len(self.x_distinct)
+        print ''
+        print len(self.y_distinct)
         print 'Found %s MAGNETIC DOCUMENTS. SHOULD BE: %s' % (len(docs),len(self.x_distinct)*len(self.y_distinct))
 
         counterList = []
         self.preapreListDictonaryCoordinatesMagneticFingerprint(counterList)
         for doc in docs:
-            for cunterDic in counterList:
+            for counterDic in counterList:
                 if doc['X'] == counterDic['X'] and doc['Y'] == counterDic['Y']:
                     counterDic['COUNTER'] += 1
         print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
@@ -75,7 +89,10 @@ class CleanData(object):
 
         if anws == 'y':
             for dic in deleteCoordinates:
-                self.coll_fingerprint.delete_one({'_id': dic['_id']})
+                cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}, 'X': dic['X'], 'Y': dic['Y']})
+                docs = [res for res in cursor]
+                print len(docs)
+                self.coll_fingerprint.delete_one({'_id': docs[0]['_id']})
         elif anws == 'n':
             pass
 
@@ -85,13 +102,14 @@ class CleanData(object):
 
         counterList = []
         self.preapreListDictonaryCoordinatesRssiFingerprint(counterList)
-        for mac_distinct in self.macAp_fingerprint_distinct:
+        for mac_distinct in self.macAp_fingerprint_distinct[0:1]:
             cursor = self.coll_fingerprint.find({'RSSI_DATA': {'$exists': True}, 'MAC_AP': mac_distinct})
             docs = [res for res in cursor]
+            print len(docs)
             for doc in docs:
                 for dic in counterList:
-                    if dic['MAC_AP'] == doc['MAC_AP'] and dic['X'] == doc['Y'] and dic['Y'] == doc['Y']:
-                        dic['CUNTER'] += 1
+                    if dic['MAC_AP'] == doc['MAC_AP'] and dic['X'] == doc['X'] and dic['Y'] == doc['Y']:
+                        dic['COUNTER'] += 1
 
         print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
 
@@ -102,12 +120,13 @@ class CleanData(object):
                 print 'MAC_AP: ' + dic['MAC_AP'] + ' X: ' + str(dic['X']) + ' Y: ' + str(dic['Y']) + 'NUMBER OF DUCUMENTS: ' + str(dic['COUNTER'])
                 deleteCoordinates.append(dic)
                 counter += 1
-
         anws = raw_input('Found %s dubled rssi documents. Do you want to delete unnecessary documents from positons?(y/n)' % counter)
 
         if anws == 'y':
             for dic in deleteCoordinates:
-                self.coll_fingerprint.delete_one({'_id': dic['_id']})
+                cursor = self.coll_fingerprint.find({'RSSI_DATA': {'$exists': True}, 'MAC_AP': dic['MAC_AP'], 'X': dic['X'], 'Y': dic['Y']})
+                docs = [res for res in cursor]
+                self.coll_fingerprint.delete_one({'_id': docs[0]['_id']})
         elif anws == 'n':
             pass
 #################################################################################################################################################################
@@ -141,7 +160,7 @@ class CleanData(object):
             docs = [res for res in cursor]
             print 'For checkpoint: %s found %s MAGNETIC DOCUMENTS. SHOULD BE: %s' % (cp,len(docs),1)
             for doc in docs:
-                for cunterDic in counterList:
+                for counterDic in counterList:
                     if doc['CHECKPOINT'] == counterDic['CHECKPOINT']:
                         counterDic['COUNTER'] += 1
         print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
@@ -158,7 +177,9 @@ class CleanData(object):
 
         if anws == 'y':
             for dic in deleteCoordinates:
-                self.coll_fingerprint.delete_one({'_id': dic['_id']})
+                cursor = self.coll_locate.find({'MAGNETIC_DATA': {'$exists': True}, 'CHECKPOINT': dic['CHECKPOINT']})
+                docs = [res for res in cursor]
+                self.coll_fingerprint.delete_one({'_id': docs[0]['_id']})
         elif anws == 'n':
             pass
 
@@ -188,14 +209,38 @@ class CleanData(object):
                 deleteCoordinates.append(dic)
                 counter += 1
 
-        anws = raw_input('Found %s dubled rssi documents in locate. Do you want to delete unnecessary documents from positons?(y/n)' % counter)
+#        showNumberOfDcumentsOnCoordinates self documents in locate. Do you want to delete unnecessary documents from positons?(y/n)' % counter)
+#'MAGNETIcursor = self.coll_fingerprint.find({})
+#        docs = [res for res in cursor]
+#        print len(docs)
+#
+#        counterList = []
+#        for x in self.x_distinct:
+#            for y in self.y_distinct:
+#                tmpDict = {}
+#                tmpDict['X'] = x
+#                tmpDict['Y'] = y
+#                tmpDict['COUNTER'] = 0
+#                counterList.append(tmpDict)
+#
+#        for doc in docs:
+#            for dic in counterList:
+#                if doc['X'] == dic['X'] and doc['Y'] == dic['Y']:
+#                    dic['COUNTER'] += 1
+#        for dic in countery_distinct:
+#                    print dic
+#                    tmpDict['Y'] = y
+#                    tmpDict['COUNTER'] = 0
+#                counterList.append(tmpDict)
 
-        if anws == 'y':
-            for dic in deleteCoordinates:
-                self.coll_fingerprint.delete_one({'_id': dic['_id']})
-        elif anws == 'n':
-            pass
-############################################################################################################
+#        for doc in docs:
+#            for dic in counterList:
+#                if doc['X'] == dic['X'] and doc['Y'] == dic['Y']:
+#                    dic['COUNTER'] += 1
+#        for dic in counterList:
+#            if dic['COUNTER'] > 4:
+#                print dic
+################################################################################
     ''' preparing list for fingerprint db'''
 
     '''method which prepares list of dict coordiantes - magnetic'''
@@ -217,10 +262,11 @@ class CleanData(object):
                     tmp['MAC_AP'] = mac
                     tmp['X'] = x
                     tmp['Y'] = y
+                    tmp['COUNTER'] = 0
                     counterList.append(tmp)
-##########################################################################################################
+###############################################################################
     ''' preparing lists for locate db'''
-##########################################################################################################
+###############################################################################
     '''method which prepares list of dict coordiantes - magnetic'''
     def preapreListDictonaryCoordinatesMagneticLocate(self,tList):
         for cp in self.locationCp_distinct:
@@ -238,12 +284,19 @@ class CleanData(object):
                 tmp['MAC_AP'] = mac
                 tmp['COUNTER'] = 0
                 counterList.append(tmp)
-######################################################################################################
+###############################################################################
 
     '''method which implements menu for script'''
     def menu(self):
-        msg = '''quit -q, 0-check if magnetic data is missing - fingerprint, 1 - if magnetic data is doubled - fingerprint, 2- if rssi is doubled - fingerprint
-        3- check if magnetic data is missing - locate, 4 - if magnetic data is doubled - locate, 5- if rssi is doubled -locate'''
+        msg = '''
+        quit -q,
+        0 - check if magnetic data is missing - fingerprint,
+        1 - if magnetic data is doubled - fingerprint,
+        2 - if rssi is doubled - fingerprint
+        3 - check if magnetic data is missing - locate,
+        4 - if magnetic data is doubled - locate,
+        5 - if rssi is doubled -locate
+        6 - show number of documents per coordinate in fingerprint map'''
         while(True):
             anws = raw_input(msg)
             if anws == 'q':
@@ -259,7 +312,10 @@ class CleanData(object):
             elif anws == '4':
                 self.isMagneticDoubledLocate()
             elif anws == '5':
-                self.isRssiDoubledFingerprint()
+                self.isRssiDoubledLocate()
+            elif anws == '6':
+                pass#self.showNumberOfDcumentsOnCoordinates()
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:

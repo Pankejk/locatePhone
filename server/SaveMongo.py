@@ -1,5 +1,5 @@
 from pymongo import *
-import scipy.stats#import statistics
+import scipy.stats
 import numpy as np
 from datetime import datetime
 from math import sqrt
