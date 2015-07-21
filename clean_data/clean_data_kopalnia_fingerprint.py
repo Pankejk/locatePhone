@@ -14,8 +14,11 @@ class CleanDataKopalniaFingerprint(object):
     def __init__(self):
 
         self.conn = MongoClient()
-        db = self.conn['fingerprint']
-        self.coll = db['kopalnia_DATASIZE_200']
+        db_fingerprint = self.conn['fingerprint']
+        db_locate = self.conn['locate']
+        self.coll = db_fingerprint['kopalnia_DATASIZE_200']
+        self.coll_side_stats = db_fingerprint['kopalnia_DATASIZE_200_side_stats']
+        self.coll_locate = db_locate['kopalnia_DATASIZE_200']
 
         self.STATISTIC_NAME = ["MEAN", "STANDARD_DEVIATION", "MAX", "MIN", "MEDIANA", "MODE", "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50", "PERCENTILE - 70",  "PERCENTILE - 90"]
         self.mac_distinct = self.coll.distinct('MAC_AP')
@@ -44,22 +47,23 @@ class CleanDataKopalniaFingerprint(object):
 
     '''copy side statistic docs to diffrent collection '''
     def copyDataSideStatistic(self):
-        cursor = self.coll.find({'X': 2})
-        docs = [res for res in cursor]
 
         print 'before before copying documents. All documents number: %s' % self.coll.count()
 
-        for doc in docs:
-            cursor = self.coll.find({'X': 1, 'Y': doc['Y']})
+        for y in self.y_side_stat:
+            cursor = self.coll.find({'X': 1, 'Y': y})
             doc1 = [res for res in cursor]
-            cursor = self.coll.find({'X': 3, 'Y': doc['Y']})
+            cursor = self.coll.find({'X': 2, 'Y': y})
+            doc2 = [res for res in cursor]
+            cursor = self.coll.find({'X': 3, 'Y': y})
             doc3 = [res for res in cursor]
 
-            if len(doc3) == 4 and len(doc1) == 4:
-                self.coll_side_stats.save(doc)
+            if len(doc3) == 4 and len(doc1) == 4 and len(doc2) == 4:
                 for d in doc1:
                     self.coll_side_stats.save(d)
                 for d in doc3:
+                    self.coll_side_stats.save(d)
+                for d in doc2:
                     self.coll_side_stats.save(d)
         print 'after compying documents. All documents: %s' % self.coll.count()
 
@@ -71,6 +75,25 @@ class CleanDataKopalniaFingerprint(object):
     def dropKopalniaFingerprint(self):
         self.coll.drop()
         os.system('mongoimport --db fingerprint --collection kopalnia_DATASIZE_200 --file ../data-backup/kopalnia_DATASIZE_200_16_07_15.json')
+
+    """method drops data from locate db and loads it again"""
+    def dropAndLoadKopalniaChekpoints(self):
+        self.coll_locate.drop()
+        os.system('mongoimport --db locate --collection kopalnia_DATASIZE_200 --file ../data-backup/kopalnia_DATASIZE_locate_200_16_07_15.json')
+    """method delete side stat docs from fingerprint """
+    def deleteSideStatsDocs(self):
+        deleteDocs = []
+        for y in self.y_side_stat:
+            for x in self.x_stat:
+                cursor = self.coll.find({'Y': y, 'X': x})
+                docs = [res for res in cursor]
+                for doc in docs:
+                    deleteDocs.append(doc)
+        before = self.coll.count()
+        for doc in deleteDocs:
+            self.coll.remove({'_id': doc['_id']})
+        after = self.coll.count()
+        print 'From finerprint map was removed: ' + str(before - after)
 
     """method creates new documents in fingerprint map """
     def createMissingDocumentsInMap(self):
@@ -139,6 +162,7 @@ class CleanDataKopalniaFingerprint(object):
             statisticResult[y]['X1'] = tmpX['X1']
             statisticResult[y]['X3'] = tmpX['X3']
 
+        print '!!!CAUTION THIS FUNCTION IS CREATING NOTHING AT ALL!!!'
         msg = 'Which data statistic do ypu want to see?\n' + str(self.STATISTIC_NAME)
         while(True):
             time.sleep(1)
@@ -161,11 +185,11 @@ class CleanDataKopalniaFingerprint(object):
         docsX2 = []
         docsX3 = []
 
-        cursor = self.coll.find({'Y': chooseY, 'X': 1})
+        cursor = self.coll_side_stats.find({'Y': chooseY, 'X': 1})
         docsX1 = [res for res in cursor]
-        cursor = self.coll.find({'Y': chooseY, 'X': 2})
+        cursor = self.coll_side_stats.find({'Y': chooseY, 'X': 2})
         docsX2 = [res for res in cursor]
-        cursor = self.coll.find({'Y': chooseY, 'X': 3})
+        cursor = self.coll_side_stats.find({'Y': chooseY, 'X': 3})
         docsX3 = [res for res in cursor]
 
         dicX1 = {}
@@ -217,6 +241,7 @@ class CleanDataKopalniaFingerprint(object):
             plt.ylabel("Frequency")
             plt.show()
 
+    """method draws histogram for all side y points"""
     def drawHistogramForAllYCoordinates(self):
         #dataDocs = {}
 
@@ -224,7 +249,7 @@ class CleanDataKopalniaFingerprint(object):
         self.preapreDictForHistogram(histogramData)
         for x in self.x_stat:
             for y in self.y_side_stat:
-                cursor = self.coll.find({'Y': y, 'X': x})
+                cursor = self.coll_side_stats.find({'Y': y, 'X': x})
                 docs = [res for res in cursor]
                 for doc in docs:
                     if 'RSSI_DATA' in doc.viewkeys():
@@ -285,7 +310,9 @@ class CleanDataKopalniaFingerprint(object):
         drop and load again data(3)
         create missing docs in fingerprint(4)
         create histograms for side(5)
-        draw histogram for all y coordinates(6)"""
+        draw histogram for all y coordinates(6)
+        delete side statistic docs(7)
+        drop kopalanoa checkpoint collection in locate db(8)"""
         while(True):
             time.sleep(1)
             anws = raw_input(msq)
@@ -306,6 +333,10 @@ class CleanDataKopalniaFingerprint(object):
                 self.drawHistogramForSideStatistics(anws)
             elif anws == '6':
                 self.drawHistogramForAllYCoordinates()
+            elif anws == '7':
+                self.deleteSideStatsDocs()
+            elif anws == '8':
+                self.dropAndLoadKopalniaChekpoints()
 
 if __name__ == '__main__':
     CleanDataKopalniaFingerprint().menu()
