@@ -1,6 +1,10 @@
 from pymongo import MongoClient
 import sys
 
+import scipy.stats
+import numpy as np
+from math import sqrt
+
 class CleanData(object):
 
     def __init__(self,collName):
@@ -18,6 +22,11 @@ class CleanData(object):
         self.locationCp_distinct = self.coll_locate.distinct('CHECKPOINT')
         self.macAp_fingerprint_distinct = self.coll_fingerprint.distinct('MAC_AP')
         self.macAp_locate_distinct = self.coll_locate.distinct('MAC_AP')
+
+        """static values"""
+        self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE",
+        "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50",
+        "PERCENTILE - 70",  "PERCENTILE - 90"]
 
     def __del__(self):
         self.conn.close()
@@ -129,7 +138,55 @@ class CleanData(object):
                 self.coll_fingerprint.delete_one({'_id': docs[0]['_id']})
         elif anws == 'n':
             pass
-#################################################################################################################################################################
+
+    """method counts data in every document and repair them if required"""
+    def countDataEveryDocumentFingerprint(self):
+        data_size = int(raw_input('What data size should be? '))
+        cursor = self.coll_fingerprint.find({})
+        docs = [res for res in cursor]
+
+        docChangeSize = []
+        for doc in docs:
+            if 'MAGNETIC_DATA' in doc.viewkeys():
+                if len(doc['MAGNETIC_DATA']) > 3 * data_size:
+                    print 'X: ' + str(doc['X']) + ' Y: ' + str(doc['Y'])
+                    + ' MAGNETIC_DATA_SIZE: ' + str(len(doc['MAGNETIC_DATA']))
+                    docChangeSize.append(doc)
+            elif 'RSSI_DATA' in doc.viewkeys():
+                if len(doc['RSSI_DATA']) > data_size:
+                    print 'X: ' + str(doc['X']) + ' Y: ' + str(doc['Y'])+' RSSI_DATA_SIZE: ' + str(len(doc['RSSI_DATA']))
+                    docChangeSize.append(doc)
+        anws = raw_input('''Found %s documents with data size biger then %s.
+         Do you want to change size of data?''' %(len(docChangeSize),data_size))
+
+        if anws == 'y':
+            print ('NUMBER OF DOCUMENTS BEFORE CHANGING DATA SIZE: '
+            + str(self.coll_fingerprint.count()))
+            for doc in docChangeSize:
+                if 'MAGNETIC_DATA' in doc.viewkeys():
+                    tmpL = doc['MAGNETIC_DATA']
+                    doc['MAGNETIC_DATA'] = tmpL[0:3*data_size]
+                    statisticsDictonary = self.countStatistics(doc['MAGNETIC_DATA'])
+                    doc['STATISTICS'] = statisticsDictonary
+                    norm = self.countsNorm(doc['MAGNETIC_DATA'])
+                    doc['MAGNETIC_DATA_NORM'] = norm
+                    statisticsDictonary = self.countStatistics(doc['MAGNETIC_DATA_NORM'])
+                    doc['STATISTICS_NORM'] = statisticsDictonary
+                elif 'RSSI_DATA' in doc.viewkeys():
+                    tmpL = doc['RSSI_DATA']
+                    doc['MAGNETIC_DATA'] = tmpL[0:data_size]
+                    statisticsDictonary = self.countStatistics(doc['RSSI_DATA'])
+                    doc['STATISTICS'] = statisticsDictonary
+                self.coll_fingerprint.save(doc)
+            print 'NUMBER OF DOCUMENTS AFTER CHANGING DATA SIZE: ' + str(self.coll_fingerprint.count())
+        elif anws == 'n':
+            pass
+
+    """method shows number of dcoument per coordinate"""
+    def showNumberOfDcumentsOnCoordinates(self):
+        pass
+
+###############################################################################
     '''methods for locate db '''
 
     ''' method shows missing magnetic documents in fingerprint map'''
@@ -209,37 +266,79 @@ class CleanData(object):
                 deleteCoordinates.append(dic)
                 counter += 1
 
-#        showNumberOfDcumentsOnCoordinates self documents in locate. Do you want to delete unnecessary documents from positons?(y/n)' % counter)
-#'MAGNETIcursor = self.coll_fingerprint.find({})
-#        docs = [res for res in cursor]
-#        print len(docs)
-#
-#        counterList = []
-#        for x in self.x_distinct:
-#            for y in self.y_distinct:
-#                tmpDict = {}
-#                tmpDict['X'] = x
-#                tmpDict['Y'] = y
-#                tmpDict['COUNTER'] = 0
-#                counterList.append(tmpDict)
-#
-#        for doc in docs:
-#            for dic in counterList:
-#                if doc['X'] == dic['X'] and doc['Y'] == dic['Y']:
-#                    dic['COUNTER'] += 1
-#        for dic in countery_distinct:
-#                    print dic
-#                    tmpDict['Y'] = y
-#                    tmpDict['COUNTER'] = 0
-#                counterList.append(tmpDict)
+    """method counts data in every document and repair them if required"""
+    def countDataEveryDocumentLocate(self):
+        data_size = int(raw_input('What data size should be? '))
+        cursor = self.coll_locate.find({})
+        docs = [res for res in cursor]
 
-#        for doc in docs:
-#            for dic in counterList:
-#                if doc['X'] == dic['X'] and doc['Y'] == dic['Y']:
-#                    dic['COUNTER'] += 1
-#        for dic in counterList:
-#            if dic['COUNTER'] > 4:
-#                print dic
+        docChangeSize = []
+        for doc in docs:
+            if 'MAGNETIC_DATA' in doc.viewkeys():
+                if len(doc['MAGNETIC_DATA']) > 3 * data_size:
+                    print ('CHECKPOINT: ' + doc['CHECKPOINT']
+                    + ' MAGNETIC_DATA_SIZE: ' + str(len(doc['MAGNETIC_DATA'])))
+                    docChangeSize.append(doc)
+            elif 'RSSI_DATA' in doc.viewkeys():
+                if len(doc['RSSI_DATA']) > data_size:
+                    print ('CHECKPOINT: ' + doc['CHECKPOINT']
+                    +' RSSI_DATA_SIZE: ' + str(len(doc['RSSI_DATA'])))
+                    docChangeSize.append(doc)
+        anws = raw_input('''Found %s documents with data size biger then %s.
+         Do you want to change size of data?''' %(len(docChangeSize),data_size))
+
+        if anws == 'y':
+            print ('NUMBER OF DOCUMENTS BEFORE CHANGING DATA SIZE: '
+            + str(self.coll_locate.count()))
+            for doc in docChangeSize:
+                if 'MAGNETIC_DATA' in doc.viewkeys():
+                    tmpL = doc['MAGNETIC_DATA']
+                    doc['MAGNETIC_DATA'] = tmpL[0:3*data_size]
+                    statisticsDictonary = self.countStatistics(doc['MAGNETIC_DATA'])
+                    doc['STATISTICS'] = statisticsDictonary
+                    norm = self.countsNorm(doc['MAGNETIC_DATA'])
+                    doc['MAGNETIC_DATA_NORM'] = norm
+                    statisticsDictonary = self.countStatistics(doc['MAGNETIC_DATA_NORM'])
+                    doc['STATISTICS_NORM'] = statisticsDictonary
+                elif 'RSSI_DATA' in doc.viewkeys():
+                    tmpL = doc['RSSI_DATA']
+                    doc['MAGNETIC_DATA'] = tmpL[0:data_size]
+                    statisticsDictonary = self.countStatistics(doc['RSSI_DATA'])
+                    doc['STATISTICS'] = statisticsDictonary
+                self.coll_locate.save(doc)
+            print 'NUMBER OF DOCUMENTS AFTER CHANGING DATA SIZE: ' + str(self.coll_locate.count())
+        elif anws == 'n':
+            pass
+################################################################################
+    """method count statistics for given list"""
+    def countStatistics(self,tList):
+        meanV = np.mean(tList)
+        standardDeviation = np.std(tList)
+        maxV = max(tList)
+        minV = min(tList)
+        medianaV = np.median(tList)
+        tmp = list(scipy.stats.mode(tList))
+        modeV = tmp[0].tolist()[0]
+        array = np.array(tList)
+        percentile10 = np.percentile(array, 10)
+        percentile20 = np.percentile(array, 20)
+        percentile50 = np.percentile(array, 50)
+        percentile70 = np.percentile(array, 70)
+        percentile90 = np.percentile(array, 90)
+        statisticsDict = {"MEAN" : meanV,"STANDARD_DEVIATION" : standardDeviation,
+         "MAX" : maxV, "MIN" : minV, "MEDIANA" : medianaV, "MODE" : modeV,
+         "PERCENTILE - 10" : percentile10,"PERCENTILE - 20" : percentile20,
+         "PERCENTILE - 50" : percentile50,  "PERCENTILE - 70" : percentile70,
+         "PERCENTILE - 90" : percentile90 }
+        return statisticsDict
+
+    """method counts norm for given data"""
+    def countsNorm(self, tList):
+        norm = []
+        for i in range(0,len(tList),3):
+            norm.append(sqrt(pow(tList[i],2) + pow(tList[i+1],2)
+            + pow(tList[i+2],2)))
+        return norm
 ################################################################################
     ''' preparing list for fingerprint db'''
 
@@ -296,7 +395,9 @@ class CleanData(object):
         3 - check if magnetic data is missing - locate,
         4 - if magnetic data is doubled - locate,
         5 - if rssi is doubled -locate
-        6 - show number of documents per coordinate in fingerprint map'''
+        6 - count data in collection and repair if necessary - fingerprint
+        7 - count data in collection and repair if necessary - locate
+        8 - count data per coordinate'''
         while(True):
             anws = raw_input(msg)
             if anws == 'q':
@@ -314,7 +415,11 @@ class CleanData(object):
             elif anws == '5':
                 self.isRssiDoubledLocate()
             elif anws == '6':
-                pass#self.showNumberOfDcumentsOnCoordinates()
+                self.countDataEveryDocumentFingerprint()
+            elif anws == '7':
+                self.countDataEveryDocumentLocate()
+            elif anws == '8':
+                self.showNumberOfDcumentsOnCoordinates()
 
 
 if __name__ == '__main__':
