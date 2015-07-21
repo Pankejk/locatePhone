@@ -106,13 +106,12 @@ class CleanData(object):
 
         counterList = []
         self.preapreListDictonaryCoordinatesRssiFingerprint(counterList)
-        for mac_distinct in self.macAp_fingerprint_distinct:
-            cursor = self.coll_fingerprint.find({'MAC_AP': mac_distinct})
-            docs = [res for res in cursor]
-            for doc in docs:
-                for dic in counterList:
-                    if dic['MAC_AP'] == doc['MAC_AP'] and dic['X'] == doc['X'] and dic['Y'] == doc['Y']:
-                        dic['COUNTER'] += 1
+        cursor = self.coll_fingerprint.find({'RSSI_DATA': {'$exists': True}})
+        docs = [res for res in cursor]
+        for doc in docs:
+            for dic in counterList:
+                if dic['MAC_AP'] == doc['MAC_AP'] and dic['X'] == doc['X'] and dic['Y'] == doc['Y']:
+                    dic['COUNTER'] += 1
 
         print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
 
