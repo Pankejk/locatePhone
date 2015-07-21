@@ -184,7 +184,19 @@ class CleanData(object):
 
     """method shows number of dcoument per coordinate"""
     def showNumberOfDcumentsOnCoordinates(self):
-        pass
+        counterDic = []
+        self.preapreListDictonaryCoordinatesMagneticFingerprint(counterDic)
+
+        cursor = self.coll_fingerprint.find({})
+        docs = [res for res in cursor]
+
+        for doc in docs:
+            for dic in counterDic:
+                if doc['X'] == dic['X'] and doc['Y'] == dic['Y']:
+                    dic['COUNTER'] += 1
+        for dic in counterDic:
+            print ('X: ' + str(dic['X']) + ' Y: ' + str(dic['Y'])
+            + ' Number of documents: ' + str(dic['COUNTER']))
 
 ###############################################################################
     '''methods for locate db '''
@@ -309,6 +321,22 @@ class CleanData(object):
             print 'NUMBER OF DOCUMENTS AFTER CHANGING DATA SIZE: ' + str(self.coll_locate.count())
         elif anws == 'n':
             pass
+
+    """method shows number of documents per coordinate"""
+    def numberOfDocumnentsPerCheckpoint(self):
+        counterDic = []
+        self.preapreListDictonaryCoordinatesMagneticLocate(counterDic)
+
+        cursor = self.coll_locate.find({})
+        docs = [res for res in cursor]
+
+        for doc in docs:
+            for dic in counterDic:
+                if (doc['CHECKPOINT'] == dic['CHECKPOINT']):
+                    dic['COUNTER'] += 1
+        for dic in counterDic:
+            print ('CHECKPOINT: ' + dic['CHECKPOINT']
+            + ' Number of documents: ' + str(dic['COUNTER']))
 ################################################################################
     """method count statistics for given list"""
     def countStatistics(self,tList):
@@ -397,7 +425,8 @@ class CleanData(object):
         5 - if rssi is doubled -locate
         6 - count data in collection and repair if necessary - fingerprint
         7 - count data in collection and repair if necessary - locate
-        8 - count data per coordinate'''
+        8 - count documents per coordinate
+        9 - count documents per checkpoint'''
         while(True):
             anws = raw_input(msg)
             if anws == 'q':
@@ -420,6 +449,8 @@ class CleanData(object):
                 self.countDataEveryDocumentLocate()
             elif anws == '8':
                 self.showNumberOfDcumentsOnCoordinates()
+            elif anws == '9':
+                self.numberOfDocumnentsPerCheckpoint()
 
 
 if __name__ == '__main__':
