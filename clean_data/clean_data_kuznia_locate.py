@@ -6,14 +6,8 @@ import scipy.stats
 
 
 def countStatisticsData(jsonFile):
-		#uniqueKeys = [j[0] for i in jsonFile for j in i.items()]
         uniqueKeys = []
-		#for key in jsonFile:
-		#	uniqueKeys.append(key)
         data = []
-		#if "RSSI_DATA" in uniqueKeys: # "FILTERED_RSSI_DATA"
-		#	data = jsonFile["RSSI_DATA"] #"FILTERED_RSSI_DATA"
-		#elif "MAGNETIC_DATA" in uniqueKeys: #"FILTERED_MAGNETIC_DATA"
         data = jsonFile['MAGNETIC_DATA_NORM'] #"FILTERED_MAGNETIC_DATA"
         array = np.array(data)
         #print data
@@ -36,46 +30,40 @@ def countStatisticsData(jsonFile):
 
 
 
-os.system('mongoimport --db locate --collection kuznia1_DATASIZE_200_STEP_3_1_DEFAULT --file data-backup/kuznia1_DATASIZE:200_STEP:3_1_DEFAULT_locate_2.07.15.json')
+os.system('mongoimport --db locate --collection kuznia1 --file ../data-backup/kuznia1_DATASIZE_200_STEP_3_1_DEFAULT_locate_2.07.15.json')
 
 conn = MongoClient()
 
 db_locate = conn['locate']
-distinctLocate = db_locate['kuznia1_DATASIZE_200_STEP_3_1_DEFAULT'].distinct('MAC_AP')
-coll_kuznia = db_locate['kuznia1_DATASIZE_200_STEP_3_1_DEFAULT']
+distinctLocate = db_locate['kuznia1'].distinct('MAC_AP')
+coll_kuznia = db_locate['kuznia1']
 distinctCp = coll_kuznia.distinct('CHECKPOINT')
 
 distinctCp.sort()
 
-infoList = []
-for cp in distinctCp:
-    for ap in distinctLocate:
-        cursor = coll_kuznia.find({'CHECKPOINT' : cp, 'MAC_AP' : ap})
-        results = [res for res in cursor]
-        tmp = [cp,ap,len(results)]
-        infoList.append(tmp)
-        if len(results) > 1:
-            #print 'NICE'
-            coll_kuznia.delete_one({'_id' : results[0]['_id']})
+#infoList = []
+#for cp in distinctCp:
+#    for ap in distinctLocate:
+#        cursor = coll_kuznia.find({'CHECKPOINT' : cp, 'MAC_AP' : ap})
+#        results = [res for res in cursor]
+#        tmp = [cp,ap,len(results)]
+#        infoList.append(tmp)
+#        if len(results) > 1:
+#            #print 'NICE'
+#            coll_kuznia.delete_one({'_id' : results[0]['_id']})
 
-infoList = []
+#infoList = []
 
-for cp in distinctCp:
-        cursor = coll_kuznia.find({'CHECKPOINT' : cp})
-        results = [res for res in cursor]
-        counter = 0
-        for doc in results:
-            if 'MAGNETIC_DATA' in doc.viewkeys():
-                counter += 1
-                if counter > 1:
-                    print 'CHECKPOINT:' + doc['CHECKPOINT'] + 'COUNTER: ' + str(counter)
-                    coll_kuznia.delete_one({'_id' : doc['_id']})
-#print "AFTER REMOVING DUPLICATION MAGNETIC DATA FOR CHECKPOINT: " + str(counter)
-        #tmp = [cp,ap,len(results)]
-        #infoList.append(tmp)
-        #if len(results) > 1:
-        #    print 'NICE'
-        #    coll_kuznia.delete_one({'_id' : results[0]['_id']})
+#for cp in distinctCp:
+#        cursor = coll_kuznia.find({'CHECKPOINT' : cp})
+#        results = [res for res in cursor]
+#        counter = 0
+#        for doc in results:
+#            if 'MAGNETIC_DATA' in doc.viewkeys():
+#                counter += 1
+#                if counter > 1:
+#                    print 'CHECKPOINT:' + doc['CHECKPOINT'] + 'COUNTER: ' + str(counter)
+#                    coll_kuznia.delete_one({'_id' : doc['_id']})
 
 for doc in coll_kuznia.find({}):
     doc['STEP'] = [2,3]
@@ -95,15 +83,15 @@ for doc in coll_kuznia.find({}):
     coll_kuznia.save(doc)
 
 
-print 'AFTER AP DUPLICATION REMOVED: ' + str(coll_kuznia.count({}))
+#print 'AFTER AP DUPLICATION REMOVED: ' + str(coll_kuznia.count({}))
 
-for doc in coll_kuznia.find({}):
-    if doc['CHECKPOINT'] == '0':
-        coll_kuznia.delete_one({'_id' : doc['_id']})
-print 'AFTER ) checkpoint removed: ' + str(coll_kuznia.count({}))
+#for doc in coll_kuznia.find({}):
+#    if doc['CHECKPOINT'] == '0':
+#        coll_kuznia.delete_one({'_id' : doc['_id']})
+#print 'AFTER ) checkpoint removed: ' + str(coll_kuznia.count({}))
 
-fd = open('kuznia_locate_repair.txt','w')
-for item in infoList:
-    if item[-1] > 1:
-        fd.write(str(item) + '\n')
-fd.close()
+#fd = open('kuznia_locate_repair.txt','w')
+#for item in infoList:
+#    if item[-1] > 1:
+#        fd.write(str(item) + '\n')
+#fd.close()

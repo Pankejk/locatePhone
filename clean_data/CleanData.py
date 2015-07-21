@@ -71,11 +71,6 @@ class CleanData(object):
     def isMagneticDoubledFingerprint(self):
         cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}})
         docs = [res for res in cursor]
-        #print len(self.x_distinct)
-        #print ''
-        print len(self.x_distinct)
-        print ''
-        print len(self.y_distinct)
         print 'Found %s MAGNETIC DOCUMENTS. SHOULD BE: %s' % (len(docs),len(self.x_distinct)*len(self.y_distinct))
 
         counterList = []
@@ -100,8 +95,8 @@ class CleanData(object):
             for dic in deleteCoordinates:
                 cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}, 'X': dic['X'], 'Y': dic['Y']})
                 docs = [res for res in cursor]
-                print len(docs)
-                self.coll_fingerprint.delete_one({'_id': docs[0]['_id']})
+                for doc in docs[1:]:
+                    self.coll_fingerprint.delete_one({'_id': doc['_id']})
         elif anws == 'n':
             pass
 
@@ -111,10 +106,9 @@ class CleanData(object):
 
         counterList = []
         self.preapreListDictonaryCoordinatesRssiFingerprint(counterList)
-        for mac_distinct in self.macAp_fingerprint_distinct[0:1]:
-            cursor = self.coll_fingerprint.find({'RSSI_DATA': {'$exists': True}, 'MAC_AP': mac_distinct})
+        for mac_distinct in self.macAp_fingerprint_distinct:
+            cursor = self.coll_fingerprint.find({'MAC_AP': mac_distinct})
             docs = [res for res in cursor]
-            print len(docs)
             for doc in docs:
                 for dic in counterList:
                     if dic['MAC_AP'] == doc['MAC_AP'] and dic['X'] == doc['X'] and dic['Y'] == doc['Y']:
@@ -135,7 +129,8 @@ class CleanData(object):
             for dic in deleteCoordinates:
                 cursor = self.coll_fingerprint.find({'RSSI_DATA': {'$exists': True}, 'MAC_AP': dic['MAC_AP'], 'X': dic['X'], 'Y': dic['Y']})
                 docs = [res for res in cursor]
-                self.coll_fingerprint.delete_one({'_id': docs[0]['_id']})
+                for doc in docs[1:]:
+                    self.coll_fingerprint.delete_one({'_id': doc['_id']})
         elif anws == 'n':
             pass
 
@@ -216,22 +211,21 @@ class CleanData(object):
                     if doc['CHECKPOINT'] == counterDic['CHECKPOINT']:
                         counterDic['COUNTER'] += 1
 
-            for dic in counterList:
-                if dic['COUNTER'] == 0:
-                    print 'CHECKPOINT MISSING MAGNETIC: ' + cp + ' NUMBER OF DUCUMENTS: ' + str(dic['COUNTER'])
+        for dic in counterList:
+            if dic['COUNTER'] == 0:
+                print 'CHECKPOINT MISSING MAGNETIC: ' + dic['CHECKPOINT'] + ' NUMBER OF DUCUMENTS: ' + str(dic['COUNTER'])
 
     ''' method shows dubled magnetic documents in fingerprint map'''
     def isMagneticDoubledLocate(self):
         counterList = []
         self.preapreListDictonaryCoordinatesMagneticLocate(counterList)
-        for cp in self.locationCp_distinct:
-            cursor = self.coll_locate.find({'MAGNETIC_DATA': {'$exists': True},'CHECKPOINT': cp})
-            docs = [res for res in cursor]
-            print 'For checkpoint: %s found %s MAGNETIC DOCUMENTS. SHOULD BE: %s' % (cp,len(docs),1)
-            for doc in docs:
-                for counterDic in counterList:
-                    if doc['CHECKPOINT'] == counterDic['CHECKPOINT']:
-                        counterDic['COUNTER'] += 1
+
+        cursor = self.coll_locate.find({'MAGNETIC_DATA': {'$exists': True}})
+        docs = [res for res in cursor]
+        for doc in docs:
+            for counterDic in counterList:
+                if doc['CHECKPOINT'] == counterDic['CHECKPOINT']:
+                    counterDic['COUNTER'] += 1
         print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
 
         counter = 0
@@ -248,25 +242,22 @@ class CleanData(object):
             for dic in deleteCoordinates:
                 cursor = self.coll_locate.find({'MAGNETIC_DATA': {'$exists': True}, 'CHECKPOINT': dic['CHECKPOINT']})
                 docs = [res for res in cursor]
-                self.coll_fingerprint.delete_one({'_id': docs[0]['_id']})
+                for doc in docs[1:]:
+                    self.coll_locate.delete_one({'_id': doc['_id']})
         elif anws == 'n':
             pass
-
 
     ''' method shows dubled RSSI documents in fingerprint map'''
     def isRssiDoubledLocate(self):
 
         counterList = []
         self.preapreListDictonaryCoordinatesRssiLocate(counterList)
-        for cp in self.locationCp_distinct:
-
-            for mac_distinct in self.macAp_locate_distinct:
-                cursor = self.coll_fingerprint.find({'RSSI_DATA': {'$exists': True}, 'MAC_AP': mac_distinct, 'CHECKPOINT': cp})
-                docs = [res for res in cursor]
-            for doc in docs:
-                for dic in counterList:
-                    if dic['MAC_AP'] == doc['MAC_AP'] and dic['CHECKPOINT'] == doc['CHECKPOINT']:
-                        dic['CUNTER'] += 1
+        cursor = self.coll_locate.find({'RSSI_DATA': {'$exists': True}})
+        docs = [res for res in cursor]
+        for doc in docs:
+            for dic in counterList:
+                if dic['MAC_AP'] == doc['MAC_AP'] and dic['CHECKPOINT'] == doc['CHECKPOINT']:
+                    dic['COUNTER'] += 1
 
         print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
 
@@ -274,9 +265,20 @@ class CleanData(object):
         deleteCoordinates = []
         for dic in counterList:
             if dic['COUNTER'] > 1:
-                print 'CHECKPOINT: ' + cp + 'MAC_AP: ' + dic['MAC_AP'] + ' DUBLED NUMBER OF DUCUMENTS: ' + str(dic['COUNTER'])
+                print 'CHECKPOINT: ' + dic['CHECKPOINT'] + 'MAC_AP: ' + dic['MAC_AP'] + ' DUBLED NUMBER OF DUCUMENTS: ' + str(dic['COUNTER'])
                 deleteCoordinates.append(dic)
                 counter += 1
+
+        anws = raw_input('Found %s dubled RSSI documents in locate. Do you want to delete unnecessary documents from checkpoints?(y/n)' % counter)
+
+        if anws == 'y':
+            for dic in deleteCoordinates:
+                cursor = self.coll_locate.find({'MAC_AP': dic['MAC_AP'], 'CHECKPOINT': dic['CHECKPOINT']})
+                docs = [res for res in cursor]
+                for doc in docs[1:]:
+                    self.coll_locate.delete_one({'_id': doc['_id']})
+        elif anws == 'n':
+            pass
 
     """method counts data in every document and repair them if required"""
     def countDataEveryDocumentLocate(self):
@@ -294,6 +296,7 @@ class CleanData(object):
             elif 'RSSI_DATA' in doc.viewkeys():
                 if len(doc['RSSI_DATA']) > data_size:
                     print ('CHECKPOINT: ' + doc['CHECKPOINT']
+                    + ' MAC_AP: ' + doc['MAC_AP']
                     +' RSSI_DATA_SIZE: ' + str(len(doc['RSSI_DATA'])))
                     docChangeSize.append(doc)
         anws = raw_input('''Found %s documents with data size biger then %s.
@@ -405,7 +408,7 @@ class CleanData(object):
     '''method which prepares list of dict coordiantes - RSSI'''
     def preapreListDictonaryCoordinatesRssiLocate(self, counterList):
         for cp in self.locationCp_distinct:
-            for mac in self.macAp_fingerprint_distinct:
+            for mac in self.macAp_locate_distinct:
                 tmp = {}
                 tmp['CHECKPOINT'] = cp
                 tmp['MAC_AP'] = mac
@@ -428,6 +431,7 @@ class CleanData(object):
         8 - count documents per coordinate
         9 - count documents per checkpoint'''
         while(True):
+            self.printInfoAboutData()
             anws = raw_input(msg)
             if anws == 'q':
                 break
