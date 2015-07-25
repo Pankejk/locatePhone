@@ -27,7 +27,7 @@ class FakeCheckpoints(object):
 
         date = str(datetime.now()).replace(' ', '.')
         date = date.replace(':','_')
-        filename = 'fakecheckpoints_' + date  + '.txt'
+        filename = 'fakecheckpoints_' + self.collName + '_' + date  + '.txt'
         self.fd = open(filename,'w')
 
     def __del__(self):
@@ -68,12 +68,12 @@ class FakeCheckpoints(object):
 
             self.saveCheckpointsToFile(checkpointCounter, tList[0], tList[1])
             for doc in docs:
-                doc['CHECKPOINT'] = checkpointCounter
+                doc['CHECKPOINT'] = str(checkpointCounter)
                 doc['MODE'] = 'LOCATE_PHONE'
-                self.coll_locate.save(doc)
                 del doc['X']
                 del doc['Y']
                 del doc['_id']
+                self.coll_locate.save(doc)
             checkpointCounter += 1
 ###############################################################################
     """method for saving checkpoints"""
