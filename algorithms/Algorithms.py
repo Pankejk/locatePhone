@@ -487,8 +487,6 @@ class Algorithms (object):
         for item in self.sumDiff['RSSI']:
             if item['MAC_AP'] == macAp:
                 diffApDocs.append(item)
-        name = 'SUM_DIFF_' + 'MEAN'
-        #print diffApDocs[0]
 
         locateCheckpoint = {}
         locateCheckpoint['RSSI'] = {}
@@ -500,24 +498,39 @@ class Algorithms (object):
 
         x_points = []
         y_points = []
+        anws = int(raw_input('%s\n Which data statistic do you want to see?(0-%s)' % (str(self.STATISTIC_NAME),(len(self.STATISTIC_NAME) - 1))))
+        statisticName = self.STATISTIC_NAME[anws]
         for point in locateCheckpoint['RSSI']['MEAN']:
             x_points.append(point['X_FINGERPRINT'])
             y_points.append(point["Y_FINGERPRINT"])
-        print len(diffApDocs)
-        print len(locateCheckpoint['RSSI']['MEAN'])
-        plt.scatter(x_points,y_points)
-        plt.xlim(0,max(self.x_distinct))
-        plt.ylim(0,max(self.y_distinct))
-        plt.show()
+
+        self.showCheckpointOnMap(x_points,y_points)
 
 
     """method choose the best points on map and show it on map"""
     def showCheckpointOnMapMagnetic(self):
-        pass
+        x_points = []
+        y_points = []
+        anws = int(raw_input('%s\n Which data statistic do you want to see?(0-%s)' % (str(self.STATISTIC_NAME),(len(self.STATISTIC_NAME) - 1))))
+        statisticName = self.STATISTIC_NAME[anws]
+        for point in self.locateCheckpoint['MAGNETIC'][statisticName]:
+            x_points.append(point['X_FINGERPRINT'])
+            y_points.append(point['Y_FINGERPRINT'])
+        self.showCheckpointOnMap(x_points,y_points)
 
     """method draws choosen ponts on map """
-    def showCheckpointOnMap(self,dicList):
-        pass
+    def showCheckpointOnMap(self,xList, yList):
+        tmpX = xList
+        tmpY = yList
+        colourList = [0] * len(tmpX)
+        colourList.append(1)
+        tmpX.append(self.checkPoints['self.currentCheckpoint']['X'])
+        tmpY.append(self.checkPoints['self.currentCheckpoint']['Y'])
+
+        plt.scatter(xList, yList,c=colourList)
+        plt.xlim(0,max(self.x_distinct))
+        plt.ylim(0,max(self.y_distinct))
+        plt.show()
 
     """ method slows down work of loop"""
     def slowDownLoop(self):
@@ -540,6 +553,7 @@ class Algorithms (object):
         for i in range(anws):
             print self.sumDiff[i]
 
+    """method shows loc"""
 ################################################################################
     '''starts locating device on RSSI and magnetic map
        with defined algorithm in constructor'''
