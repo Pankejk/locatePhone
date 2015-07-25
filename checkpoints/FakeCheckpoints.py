@@ -25,7 +25,9 @@ class FakeCheckpoints(object):
         self.x_min = min(self.x_distinct)
         self.y_min = min(self.y_distinct)
 
-        filename = 'fakecheckpoints_' + str(datetime.now()).replace(' ', '.') + '.txt'
+        date = str(datetime.now()).replace(' ', '.')
+        date = date.replace(':','_')
+        filename = 'fakecheckpoints_' + date  + '.txt'
         self.fd = open(filename,'w')
 
     def __del__(self):
