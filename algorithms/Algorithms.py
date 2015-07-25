@@ -65,8 +65,6 @@ class Algorithms (object):
         self.checkpointsLocate = self.collLocate.distinct('CHECKPOINT')
         self.mac_fingerprint_distinct = self.collFingerprint.distinct('MAC_AP')
 
-
-
     '''destructor closes connection to mongo database'''
     def __del__(self):
 
@@ -198,7 +196,6 @@ class Algorithms (object):
         doc['MAC_PHONE'] = self.macPhone
         doc['PLACE'] = self.place
         doc['CHECKPOINT'] = self.currentCheckpoint
-        print self.currentCheckpoint
         coordinatesCheckpoint = {}
         coordinatesCheckpoint['X'] = float(self.checkPoints[self.currentCheckpoint]['X'])
         coordinatesCheckpoint['Y'] = float(self.checkPoints[self.currentCheckpoint]['Y'])
@@ -236,7 +233,7 @@ class Algorithms (object):
 
     ''' method preapres class for countings for next checkpoint'''
     def beforeLocate(self,checkpoint):
-        self.currentCheckpoint = checkpoint
+        self.currentCheckpoint = str(checkpoint)
         self.prepareCheckpointStatistic()
         self.beforeLocateEucledian()
 
@@ -470,14 +467,19 @@ class Algorithms (object):
             q - quit
             0 - show checkpoint on acces point map
             1 - show checkpoint on magnetic field map
-            2 - show table of diffrence''')
+            2 - show list of diffrence
+            3 - show list of summ diffrence''')
             if anws == 'q':
                 break
             elif anws == '0':
                 anws = int(raw_input('''This are all checkpoints: %s. Choose(0,%s)''' % (str(self.mac_fingerprint_distinct), len(self.mac_fingerprint_distinct))))
                 self.showCheckpointOnMapAp(anws)
             elif anws == '1':
-                pass
+                self.showCheckpointOnMapMagnetic()
+            elif anws == '2':
+                self.showTableOfDiffrence()
+            elif anws == '3':
+                self.showsSumAllDiff()
 
     """method chooses best points in map accordingly to AP and draw it on graph"""
     def showCheckpointOnMapAp(self,macChoice):
@@ -523,10 +525,9 @@ class Algorithms (object):
         tmpX = xList
         tmpY = yList
         colourList = [0] * len(tmpX)
-        colourList.append(1)
-        tmpX.append(self.checkPoints['self.currentCheckpoint']['X'])
-        tmpY.append(self.checkPoints['self.currentCheckpoint']['Y'])
-
+        colourList.append(100)
+        tmpX.append(int(self.checkPoints[self.currentCheckpoint]['X']))
+        tmpY.append(int(self.checkPoints[self.currentCheckpoint]['Y']))
         plt.scatter(xList, yList,c=colourList)
         plt.xlim(0,max(self.x_distinct))
         plt.ylim(0,max(self.y_distinct))
