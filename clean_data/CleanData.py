@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 import sys
+import os
 
 import scipy.stats
 import numpy as np
@@ -27,6 +28,11 @@ class CleanData(object):
         self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE",
         "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50",
         "PERCENTILE - 70",  "PERCENTILE - 90"]
+        self.allDirs = {'algorithms' : 'algorithms/', 'backup_workspace': 'backup_workspace/',
+        'checkpoints': 'checkpoints/', 'clean_data': 'clean_data/',
+        'data-backup': 'data-backup/', 'INSTALL': 'INSTALL/',
+         'sample': 'sample/','server': 'server/', 'tests': 'tests/'}
+        self.project_dir='/home/mike/Desktop/praca_magisterska/workspace/'
 
     def __del__(self):
         self.conn.close()
@@ -339,6 +345,42 @@ class CleanData(object):
         for dic in counterDic:
             print ('CHECKPOINT: ' + dic['CHECKPOINT']
             + ' Number of documents: ' + str(dic['COUNTER']))
+
+    """methods read given file and compare checkpoint in locate database"""
+    def comapreLocateColectionWithFile(self):
+        dir_name = self.project_dir + self.allDirs['checkpoints']
+        checkpoints = []
+
+        dirList = os.listdir(dir_name)
+        anws = int(raw_input('%s\nChoose file with checkpoints(0-%s) ' % (str(dirList), len(dirList)-1)))
+
+        with open(dir_name + dirList[anws],'r') as fd:
+            lines = fd.readlines()
+
+        for line in lines:
+            line = line.replace('\n','')
+            tmp = line.split(' ')
+            checkpoints.append(tmp[0])
+
+        distinctLocateCheckpoints = self.coll_locate.distinct('CHECKPOINT')
+
+        missingCheckpoints = []
+        if len(distinctLocateCheckpoints) != len(checkpoints):
+            for checkpointLocate in distinctLocateCheckpoints:
+                if  not checkpointLocate in checkpoints:
+                    missingCheckpoints.append(checkpointLocate)
+        anws = raw_input('%s\nThese checkpoints are not present in file: %s. Do you want to delete them from collection?(y/n) ' % (str(missingCheckpoints), dirList[anws]))
+        if anws == 'y':
+            print 'NUMBER OF DOCUMENTS BEFORE REMOVING CHECKPOINT FROM COLLECTION %s : %s' %  (self.collName, len(self.coll_locate.count()))
+            for missingCheckpoint in missingCheckpoints:
+                cursor = self.coll_locate.find({'CHECKPOINT': missingCheckpoint})
+                docs = [res for res in cursor]
+
+                for doc in docs:
+                    self.coll_locate.remove({'_id': doc['_id']})
+            print 'NUMBER OF DOCUMENTS AFTER REMOVING CHECKPOINT FROM COLLECTION %s : %s' %  (self.collName, len(self.coll_locate.count()))
+        elif anws == 'n':
+            pass
 ################################################################################
     """method count statistics for given list"""
     def countStatistics(self,tList):
@@ -428,7 +470,8 @@ class CleanData(object):
         6 - count data in collection and repair if necessary - fingerprint
         7 - count data in collection and repair if necessary - locate
         8 - count documents per coordinate
-        9 - count documents per checkpoint'''
+        9 - count documents per checkpoint
+        10 - check if locate collection has checkpoint as in file with coordinates'''
         while(True):
             self.printInfoAboutData()
             anws = raw_input(msg)
@@ -454,6 +497,8 @@ class CleanData(object):
                 self.showNumberOfDcumentsOnCoordinates()
             elif anws == '9':
                 self.numberOfDocumnentsPerCheckpoint()
+            elif anws == '10':
+                self.comapreLocateColectionWithFile()
 
 
 if __name__ == '__main__':
