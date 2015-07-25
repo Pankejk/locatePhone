@@ -4,21 +4,30 @@ from pymongo import MongoClient
 import sys
 import operator
 
+import time
+
+import numpy as np
+import matplotlib.pyplot as plt
+
 class Algorithms (object):
 
     ''' Algorithm class '''
 
-    def __init__(self, collectionName, checkPointFile, numberNeighbours, algorithmDistance, algorithmChoosePoints):
+    def __init__(self, collectionName, collectionNameLocate, checkPointFile, numberNeighbours, algorithmDistance, algorithmChoosePoints, mode):
 
         '''constructor'''
 
         self.collName = collectionName
+        self.collNameLocate = collectionNameLocate
         self.fileName = checkPointFile
         self.numberOfNeighbours = numberNeighbours
         self.choosenAlgorithmDistance = algorithmDistance
         self.choosenAlgorithmChoosePoints = algorithmChoosePoints
+        self.mode = mode
 
-        self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE", "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50", "PERCENTILE - 70",  "PERCENTILE - 90"]
+        self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE",
+        "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50",
+        "PERCENTILE - 70",  "PERCENTILE - 90"]
         self.ALGORITHM_DISTANCE_NAME = ['EUCLEUDIAN_DISTANCE', '']
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_','']
 
@@ -26,6 +35,7 @@ class Algorithms (object):
         self.y_distinct = None
         self.checkPoints = {}
         self.checkpointsLocate = []
+        self.mac_fingerprint_distinct = []
 
         self.conn = MongoClient()
 
@@ -34,26 +44,26 @@ class Algorithms (object):
         self.dbResult = self.conn['result']
         #dbResultBackup = self.conn['result_backup']
         self.collFingerprint = dbFingerprint[self.collName]
-        self.collLocate = dbLocate[self.collName]
+        self.collLocate = dbLocate[self.collNameLocate]
         #self.collResult = dbResult['result_' + self.collName]
         #self.collResultBackup = dbResultBackup[self.collName]
+
 
         '''data for all algorithms'''
         self.ipPhone = ''
         self.macPhone = ''
         self.place = ''
         self.currentCheckpoint = ''
-
-        '''eucledian algorithm variables'''
         self.checkpointStatistic = []
+        self.locateCheckpoint = {}
         self.sumDiff = {}
         self.allDiff = {}
-        self.locateCheckpoint = {}
 
         self.loadCheckPoints()
         self.distinctCoordinates()
         self.placeAndPhoneInfo()
         self.checkpointsLocate = self.collLocate.distinct('CHECKPOINT')
+        self.mac_fingerprint_distinct = self.collFingerprint.distinct('MAC_AP')
 
 
 
@@ -68,7 +78,7 @@ class Algorithms (object):
         name = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance]
         self.dbResult[name].insert(doc)
 
-##############################################################################################################################################
+###############################################################################
     ''' PREPARING CLASS FOR LOCATING BY ANY ALGORITHM'''
 
     '''reading checkpoints coordinates from text file '''
@@ -154,7 +164,7 @@ class Algorithms (object):
                 #!!!!!!!!!print resultDict
 
 
-    '''method prepare result dictonry with choosen points fo certain statistic data'''
+    '''method prepare result dictonary with choosen points fo certain statistic data'''
     def resultChosenPoints(self,resultDict, chosenPointsDict):
         for dataStatistic in self.STATISTIC_NAME:
             name = 'SUM_DIFF_' + dataStatistic
@@ -221,7 +231,7 @@ class Algorithms (object):
         self.resultChosenPoints(docDict, self.locateCheckpoint)
         self.resultUsedAp(docDict['RSSI'])
 
-##############################################################################################################################################################################
+###############################################################################
     '''GENERAL LOCATING ALGORITHM SCHEMA '''
 
     ''' method preapres class for countings for next checkpoint'''
@@ -290,7 +300,7 @@ class Algorithms (object):
         self.insertResult(resultDic['MAGNETIC'])
         #self.countLocationAndErrorEucledian()
 
-#########################################################################################################################################################################################################
+###############################################################################
     '''eucledian implemetation'''
 
     ''' method preapre list to keep sum of all difference between certain CP for certain point at rssi map and magnetic map
@@ -301,14 +311,21 @@ class Algorithms (object):
         self.sumDiff['MAGNETIC'] = []
         for x in self.x_distinct:
             for y in self.y_distinct:
-                tmpDic = {}
-                tmpDic['X_FINGERPRINT'] = x
-                tmpDic['Y_FINGERPRINT'] = y
-                for dataStatistic in self.STATISTIC_NAME:
-                    name = 'SUM_DIFF_' + dataStatistic
-                    tmpDic[name] = 0
-                self.sumDiff['RSSI'].append(tmpDic)
-                self.sumDiff['MAGNETIC'].append(tmpDic)
+                for mac in self.mac_fingerprint_distinct:
+                    tmpDicAp = {}
+                    tmpDicAp['X_FINGERPRINT'] = x
+                    tmpDicAp['Y_FINGERPRINT'] = y
+                    tmpDicAp['MAC_AP'] = mac
+
+                    tmpDicMagnetic = {}
+                    tmpDicMagnetic['X_FINGERPRINT'] = x
+                    tmpDicMagnetic['Y_FINGERPRINT'] = y
+                    for dataStatistic in self.STATISTIC_NAME:
+                        name = 'SUM_DIFF_' + dataStatistic
+                        tmpDicMagnetic[name] = 0
+                        tmpDicAp[name] = 0
+                    self.sumDiff['RSSI'].append(tmpDicAp)
+                    self.sumDiff['MAGNETIC'].append(tmpDicMagnetic)
 
     ''' method preapre list to keep all diffrence beerween CP and all points in magnetic and rssi map '''
     def prepareAllDiffEucledian(self):
@@ -396,7 +413,7 @@ class Algorithms (object):
         ''' suming rssi data in certain points'''
         for doc in self.allDiff['RSSI']:
             for sumDoc in self.sumDiff['RSSI']:
-                if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT']:
+                if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['MAC_AP'] == sumDoc['MAC_AP']:
                     for dataStatistic in self.STATISTIC_NAME:
                         name = 'SUM_DIFF_' + dataStatistic
                         #print doc
@@ -444,32 +461,142 @@ class Algorithms (object):
         #    self.locateCheckpoint['MAGNETIC'][dataStatistic] = self.sumDiff['MAGNETIC'][0:3]
 
     #def countLocationAndErrorEucledian(self):
+###############################################################################
+    """set of methods for debugging locating algorithm"""
+    def menu(self):
+        while(True):
+            self.slowDownLoop()
+            anws = raw_input('''
+            q - quit
+            0 - show checkpoint on acces point map
+            1 - show checkpoint on magnetic field map
+            2 - show table of diffrence''')
+            if anws == 'q':
+                break
+            elif anws == '0':
+                anws = int(raw_input('''This are all checkpoints: %s. Choose(0,%s)''' % (str(self.mac_fingerprint_distinct), len(self.mac_fingerprint_distinct))))
+                self.showCheckpointOnMapAp(anws)
+            elif anws == '1':
+                pass
+
+    """method chooses best points in map accordingly to AP and draw it on graph"""
+    def showCheckpointOnMapAp(self,macChoice):
+        macAp = self.mac_fingerprint_distinct[macChoice]
+
+        diffApDocs = []
+        for item in self.sumDiff['RSSI']:
+            if item['MAC_AP'] == macAp:
+                diffApDocs.append(item)
+        name = 'SUM_DIFF_' + 'MEAN'
+        #print diffApDocs[0]
+
+        locateCheckpoint = {}
+        locateCheckpoint['RSSI'] = {}
+        for dataStatistic in self.STATISTIC_NAME:
+            locateCheckpoint['RSSI'][dataStatistic] = []
+
+        for doc in diffApDocs:
+            self.sortEucledianSumDiffrence(locateCheckpoint['RSSI'],doc)
+
+        x_points = []
+        y_points = []
+        for point in locateCheckpoint['RSSI']['MEAN']:
+            x_points.append(point['X_FINGERPRINT'])
+            y_points.append(point["Y_FINGERPRINT"])
+        print len(diffApDocs)
+        print len(locateCheckpoint['RSSI']['MEAN'])
+        plt.scatter(x_points,y_points)
+        plt.xlim(0,max(self.x_distinct))
+        plt.ylim(0,max(self.y_distinct))
+        plt.show()
 
 
+    """method choose the best points on map and show it on map"""
+    def showCheckpointOnMapMagnetic(self):
+        pass
 
-##################################################################################################################################################################################
+    """method draws choosen ponts on map """
+    def showCheckpointOnMap(self,dicList):
+        pass
+
+    """ method slows down work of loop"""
+    def slowDownLoop(self):
+        time.sleep(0.5)
+
+    """clean debugging variables"""
+    def beforeDebugg(self):
+        self.debugAllDiff = []
+
+###############################################################################
+    """ method shows diff table for magnetic or certain AP """
+    def showTableOfDiffrence(self):
+        anws  = int(raw_input('How many records?(1-%s)' % len(self.allDiff)))
+        for i in range(anws):
+            print self.allDiff[i]
+
+    """method shows sumdiff table"""
+    def showsSumAllDiff(self):
+        anws  = int(raw_input('How many records?(1-%s)' % len(self.sumDiff)))
+        for i in range(anws):
+            print self.sumDiff[i]
+
+################################################################################
     '''starts locating device on RSSI and magnetic map
        with defined algorithm in constructor'''
     def startLocate(self):
         for checkpoint in self.checkpointsLocate: #[0:5]:
             print 'BEFORE LOCATING CHECKPOINT - ' + checkpoint
-            self.beforeLocate(checkpoint)
-            self.countDifference()
-            self.countSumStatisticalDiffrence()
-            self.choosePointsOnMap()
-            self.countLocationAndError()
+            if self.mode == 'DEPLOY':
+                self.beforeLocate(checkpoint)
+                self.countDifference()
+                self.countSumStatisticalDiffrence()
+                self.choosePointsOnMap()
+                self.countLocationAndError()
+            elif self.mode == 'DEBUG':
+                self.beforeLocate(checkpoint)
+                anws = raw_input('DEBUG - after before locate smth(y/n/q)?')
+                if anws == 'y':
+                    self.menu()
+                elif anws == 'q':
+                    break
+                self.countDifference()
+                anws = raw_input('DEBUG - after count diffrence smth(y/n/q)?')
+                if anws == 'y':
+                    self.menu()
+                elif anws == 'q':
+                    break
+                self.countSumStatisticalDiffrence()
+                anws = raw_input('DEBUG - after summing diffrence smth(y/n/q)?')
+                if anws == 'y':
+                    self.menu()
+                elif anws == 'q':
+                    break
+                self.choosePointsOnMap()
+                anws = raw_input('DEBUG after choosing checkpoint smth(y/n/q)?')
+                if anws == 'y':
+                    self.menu()
+                elif anws == 'q':
+                    break
+                self.countLocationAndError()
+                anws = raw_input('DEBUG after counting location error smth(y/n/q)?')
+                if anws == 'y':
+                    self.menu()
+                elif anws == 'q':
+                    break
             print 'AFTER LOCATING CHECKPOINT - ' + checkpoint
 
 
 def main():
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 8:
         sys.exit('Wrong number argument length : %s' % len(sys.argv))
     collName = sys.argv[1]
-    checkPointFile = sys.argv[2]
-    numberOfNeighbours = int(sys.argv[3])
-    algorithmDistance = int(sys.argv[4])
-    algorithmChoosePoints = int(sys.argv[5])
-    Algorithms(collName, checkPointFile, numberOfNeighbours, algorithmDistance, algorithmChoosePoints).startLocate()
+    collNameLocate = sys.argv[2]
+    checkPointFile = sys.argv[3]
+    numberOfNeighbours = int(sys.argv[4])
+    algorithmDistance = int(sys.argv[5])
+    algorithmChoosePoints = int(sys.argv[6])
+    mode = sys.argv[7]
+    Algorithms(collName, collNameLocate, checkPointFile, numberOfNeighbours, algorithmDistance, algorithmChoosePoints, mode).startLocate()
 
 
 if __name__ == '__main__':
