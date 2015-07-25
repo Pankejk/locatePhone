@@ -11,12 +11,14 @@ class FakeCheckpoints(object):
 
     def __init__(self, collName):
         self.collName = collName
-
+        self.collLocateName = 'locate_fake_checkpoints_' + self.collName
         self.conn = MongoClient()
         db_fingerprint = self.conn['fingerprint']
         db_locate = self.conn['locate']
         self.coll_fingerprint = db_fingerprint[self.collName]
-        self.coll_locate = db_locate['locate_fake_checkpoints_' + self.collName]
+        self.coll_locate = db_locate[self.collLocateName]
+        if self.collLocateName in db_locate.collection_names():
+            self.coll_locate.drop()
 
         self.x_distinct = self.coll_fingerprint.distinct('X')
         self.y_distinct = self.coll_fingerprint.distinct('Y')
@@ -41,18 +43,18 @@ class FakeCheckpoints(object):
 
         counter = 0
         while (True):
-            x = random.randint(self.x_min,self.x_max)
+            x = random.randint(0,len(self.x_distinct) -1)
             if not x in random_x:
-                random_x.append(x)
+                random_x.append(self.x_distinct[x])
                 counter += 1
             if counter == numberOfFakeCheckpoints:
                 break
 
         counter = 0
         while (True):
-            y = random.randint(self.y_min,self.y_max)
+            y = random.randint(0,len(self.y_distinct) - 1)
             if not y in random_y:
-                random_y.append(y)
+                random_y.append(self.y_distinct[y])
                 counter += 1
             if counter == numberOfFakeCheckpoints:
                 break
