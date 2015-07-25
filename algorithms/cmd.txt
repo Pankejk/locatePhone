@@ -1,0 +1,1 @@
+python algorithms/Algorithms.py kuznia1 locate_fake_checkpoints_kuznia1_DATASIZE_200_STEP_3_1_DEFAULT checkpoints/fakecheckpoints_2015-07-20.20_31_49.925968.txt 4 0 0 DEBUG
