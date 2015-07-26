@@ -22,6 +22,8 @@ class DrawFingerprint(object):
         self.availableCollections = str(self.db_fingerprint.collection_names())
         self.x_distinct = self.coll.distinct('X')
         self.y_distinct = self.coll.distinct('Y')
+        self.x_distinct.sort()
+        self.y_distinct.sort()
         self.mac_ap_distinct = self.coll.distinct('MAC_AP')
         self.chceckpoints = self.coll_locate.distinct('CHECKPOINT')
         self.step = self.coll.distinct('STEP')
@@ -41,7 +43,7 @@ class DrawFingerprint(object):
     def availableAp(self):
         return 'ALL AP -' + str(self.mac_ap_distinct) + '\nchoose from 0 to %s ' % str(len(self.mac_ap_distinct) -1)
 ###############################################################################
-    '''method draws fingerprint for certain AP'''
+    '''method draws fingerprint for certain AP - plot_surface'''
     def drawFingerprintAp(self,chosenAp):
         anws  = int(raw_input('''%s\nChoose data statistics(0-%s)''' % (str(self.STATISTIC_NAME),len(self.STATISTIC_NAME) - 1)))
 
@@ -75,7 +77,7 @@ class DrawFingerprint(object):
         fig.colorbar(surf, shrink=0.5, aspect=5)
         plt.show()
 
-    '''method draws magnetic fingerprint'''
+    '''method draws magnetic fingerprint - plot_surface'''
     def drawFingerprintMagnetic(self):
         anws  = int(raw_input('''%s\nChoose data statistics(0-%s)''' % (str(self.STATISTIC_NAME),len(self.STATISTIC_NAME) - 1)))
 
@@ -107,6 +109,73 @@ class DrawFingerprint(object):
         surf = ax.plot_surface(drawArray['X'], drawArray['Y'], drawArray['MAGNETIC'],rstride=1, cstride=1, alpha=1,cmap=cm.jet,  linewidth=0)
         fig.colorbar(surf, shrink=0.5, aspect=5)
         plt.show()
+
+    """method draws heat map for certain AP"""
+    def drawHeatmapAp(self,chosenAp):
+        anws  = int(raw_input('''%s\nChoose data statistics(0-%s)''' % (str(self.STATISTIC_NAME),len(self.STATISTIC_NAME) - 1)))
+
+        drawArray = {'RSSI': 0}
+
+        rssiList = []
+        for x in self.x_distinct:
+            for y in self.y_distinct:
+                cursor = self.coll.find({'MAC_AP' : self.mac_ap_distinct[chosenAp], 'X': x, 'Y': y})
+                docs = [res for res in cursor]
+                if len(docs) == 0:
+                    rssiList.append(0)
+                elif len(docs) == 1:
+                    rssiList.append(docs[0]['STATISTICS'][self.STATISTIC_NAME[anws]])
+        finalList = []
+        for i in range(0,len(rssiList),len(self.x_distinct)):
+            finalList.append(rssiList[i:i+len(self.x_distinct)])
+
+        drawArray['RSSI'] = np.asarray(finalList)
+
+        x = []
+        y = []
+        for tx in self.x_distinct:
+            x.append(str(tx))
+        for ty in self.y_distinct:
+            y.append(str(ty))
+
+        plt.pcolor(drawArray['RSSI'])
+        plt.yticks(np.arange(0,len(self.y_distinct)),y)
+        plt.xticks(np.arange(0,len(self.x_distinct)),x)
+        plt.show()
+
+    """method draws heat map for magnetic field"""
+    def drawHeatmapMagnetic(self):
+        anws  = int(raw_input('''%s\nChoose data statistics(0-%s)''' % (str(self.STATISTIC_NAME),len(self.STATISTIC_NAME) - 1)))
+
+        drawArray = {'MAGNETIC': 0}
+
+        rssiList = []
+        for x in self.x_distinct:
+            for y in self.y_distinct:
+                cursor = self.coll.find({'MAGNETIC_DATA' : {'$exists': True}, 'X': x, 'Y': y})
+                docs = [res for res in cursor]
+                if len(docs) == 0:
+                    rssiList.append(0)
+                elif len(docs) == 1:
+                    rssiList.append(docs[0]['STATISTICS_NORM'][self.STATISTIC_NAME[anws]])
+        finalList = []
+        for i in range(0,len(rssiList),len(self.x_distinct)):
+            finalList.append(rssiList[i:i+len(self.x_distinct)])
+
+        drawArray['MAGNETIC'] = np.asarray(finalList)
+
+        x = []
+        y = []
+        for tx in self.x_distinct:
+            x.append(str(tx))
+        for ty in self.y_distinct:
+            y.append(str(ty))
+
+        plt.pcolor(drawArray['MAGNETIC'])
+        plt.yticks(np.arange(0,len(self.y_distinct)),y)
+        plt.xticks(np.arange(0,len(self.x_distinct)),x)
+        plt.show()
+
 ###############################################################################
     def menu(self):
 
@@ -114,8 +183,10 @@ class DrawFingerprint(object):
             time.sleep(1)
             anws = raw_input('''
             q - quit
-            0 - show magnetic fingerprint - kuznia
-            1 - show rssi fingerprint - kuznia''')
+            0 - show magnetic fingerprint
+            1 - show rssi fingerprint
+            2 - draw heatmap rssi
+            3 - draw heatmap magnetic''')
 
             if anws == 'q':
                 break
@@ -124,6 +195,11 @@ class DrawFingerprint(object):
             elif anws == '1':
                 anws = int(raw_input(self.availableAp()))
                 self.drawFingerprintAp(anws)
+            elif anws == '2':
+                anws = int(raw_input(self.availableAp()))
+                self.drawHeatmapAp(anws)
+            elif anws == '3':
+                self.drawHeatmapMagnetic()
 if __name__ == '__main__':
     if len(sys.argv)  == 2:
         collName = sys.argv[1]
