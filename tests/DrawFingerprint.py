@@ -2,6 +2,8 @@ from pymongo import MongoClient
 import time
 import sys
 
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -15,118 +17,107 @@ class DrawFingerprint(object):
         self.db_fingerprint = self.conn['fingerprint']
         self.db_locate = self.conn['locate']
         self.coll = self.db_fingerprint[self.collName]
-        self.coll_locate = self.db_fingerprint[self.collName]
+        self.coll_locate = self.db_locate[self.collName]
 
         self.availableCollections = str(self.db_fingerprint.collection_names())
         self.x_distinct = self.coll.distinct('X')
         self.y_distinct = self.coll.distinct('Y')
         self.mac_ap_distinct = self.coll.distinct('MAC_AP')
-        self.chceckpoints = self.coll
+        self.chceckpoints = self.coll_locate.distinct('CHECKPOINT')
         self.step = self.coll.distinct('STEP')
+        self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE",
+        "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50",
+        "PERCENTILE - 70",  "PERCENTILE - 90"]
 
         self.menu()
 
     ''' destructor '''
     def __del__(self):
         self.conn.close()
-#############################################################################################################################################################
+###############################################################################
     ''' method to communicate with menu'''
 
     '''method returns msg for choosing ap'''
     def availableAp(self):
         return 'ALL AP -' + str(self.mac_ap_distinct) + '\nchoose from 0 to %s ' % str(len(self.mac_ap_distinct) -1)
-##############################################################################################################################################################
+###############################################################################
     '''method draws fingerprint for certain AP'''
     def drawFingerprintAp(self,chosenAp):
-        cursor = self.coll.find({'MAC_AP' : self.mac_ap_distinct[chosenAp]})
-        docs = [res for res in cursor]
-        drawList = {'X': [], 'Y': [],'RSSI': []}
-        for doc in docs:
-            #print 'X:' + str(doc['X']) + ' Y: ' + str(doc['Y'])
-            #print 'STEP X: ' + str(self.step[0]) + 'STEP Y: ' + str(self.step[1])
-            tmp1 = np.arange(doc['X'],doc['X'] + self.step[0],0.2).tolist()
+        anws  = int(raw_input('''%s\nChoose data statistics(0-%s)''' % (str(self.STATISTIC_NAME),len(self.STATISTIC_NAME) - 1)))
 
-            #drawList['X'].append(tmp1)
-            tmp2 = np.arange(doc['Y'],doc['Y'] + self.step[1],0.3).tolist()
-            #print tmp2
-            #drawList['Y'].append(tmp2)
-            size = len(tmp1)
-            tmp1  = self.preapreBetterDrawing(tmp1,size,'X')
-            tmp2 = self.preapreBetterDrawing(tmp2,size,'Y')
-            print len(tmp1)
-            print len(tmp2)
-            tmp = [doc['STATISTICS']['MEAN']]* len(tmp1)
-            print len(tmp)
-            self.appendDrawList(tmp1,drawList['X'])
-            self.appendDrawList(tmp2,drawList['Y'])
-            self.appendDrawList(tmp,drawList['RSSI'])
-            #drawList['RSSI'].append(tmp)
-            #drawList['X']append(doc['X'])
-            #drawList['Y']append(doc['Y'])
-            #drawList['RSSU']append(doc['STATISTICS']['MEAN'])
-        print 'X length: %s' % len(drawList['X'])
-        print 'Y length: %s' % len(drawList['Y'])
-        print 'RSSI length: %s'% len(drawList['RSSI'])
-        #print drawList['X']
-        #print drawList['Y']
-        #print drawList['RSSI']
-        plt.scatter(drawList['X'], drawList['Y'], c=drawList['RSSI'])
+        drawArray = {'X': 0, 'Y': 0,'RSSI': 0}
+        drawArray['X'] = np.asarray(self.x_distinct)
+        drawArray['Y'] = np.asarray(self.y_distinct)
+        drawArray['X'], drawArray['Y'] = np.meshgrid(drawArray['X'],drawArray['Y'])
+
+        rssiList = []
+        for x in self.x_distinct:
+            for y in self.y_distinct:
+                cursor = self.coll.find({'MAC_AP' : self.mac_ap_distinct[chosenAp], 'X': x, 'Y': y})
+                docs = [res for res in cursor]
+                if len(docs) == 0:
+                    rssiList.append(0)
+                elif len(docs) == 1:
+                    rssiList.append(docs[0]['STATISTICS'][self.STATISTIC_NAME[anws]])
+        finalList = []
+        for i in range(0,len(rssiList),len(self.x_distinct)):
+            finalList.append(rssiList[i:i+len(self.x_distinct)])
+
+        drawArray['RSSI'] = np.asarray(finalList)
+        drawArray['RSSI'] = drawArray['RSSI'].reshape(drawArray['X'].shape)
+
+        print drawArray['X']
+        print drawArray['Y']
+        print drawArray['RSSI']
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        surf = ax.plot_surface(drawArray['X'], drawArray['Y'], drawArray['RSSI'],rstride=1, cstride=1, alpha=1,cmap=cm.jet,  linewidth=0)
+        fig.colorbar(surf, shrink=0.5, aspect=5)
         plt.show()
 
     '''method draws magnetic fingerprint'''
     def drawFingerprintMagnetic(self):
-        cursor = self.coll.find({'STATISTICS_NORM': {'$exists': True}})
-        docs = [res for res in cursor]
-        drawList = {'X': [], 'Y': [],'MAGNETIC': []}
+        anws  = int(raw_input('''%s\nChoose data statistics(0-%s)''' % (str(self.STATISTIC_NAME),len(self.STATISTIC_NAME) - 1)))
 
-        for doc in docs:
-            tmp1 = np.arange(doc['X'],doc['X'] + self.step[0],0.2).tolist()
-            tmp2 = np.arange(doc['Y'],doc['Y'] + self.step[1],0.3).tolist()
-            size = len(tmp1)
-            tmp1  = self.preapreBetterDrawing(tmp1,size,'X')
-            tmp2 = self.preapreBetterDrawing(tmp2,size,'Y')
-            tmp = [doc['STATISTICS_NORM']['MEAN']]* len(tmp1)
-            #print len(tmp)
-            self.appendDrawList(tmp1,drawList['X'])
-            self.appendDrawList(tmp2,drawList['Y'])
-            self.appendDrawList(tmp,drawList['MAGNETIC'])
-        plt.scatter(drawList['X'], drawList['Y'], c=drawList['MAGNETIC'])
+        drawArray = {'X': 0, 'Y': 0,'MAGNETIC': 0}
+        drawArray['X'] = np.asarray(self.x_distinct)
+        drawArray['Y'] = np.asarray(self.y_distinct)
+        drawArray['X'], drawArray['Y'] = np.meshgrid(drawArray['X'],drawArray['Y'])
+
+        rssiList = []
+        for x in self.x_distinct:
+            for y in self.y_distinct:
+                cursor = self.coll.find({'MAGNETIC_DATA' : {'$exists': True}, 'X': x, 'Y': y})
+                docs = [res for res in cursor]
+                if len(docs) == 0:
+                    rssiList.append(0)
+                elif len(docs) == 1:
+                    rssiList.append(docs[0]['STATISTICS_NORM'][self.STATISTIC_NAME[anws]])
+        finalList = []
+        for i in range(0,len(rssiList),len(self.x_distinct)):
+            finalList.append(rssiList[i:i+len(self.x_distinct)])
+
+        drawArray['MAGNETIC'] = np.asarray(finalList)
+
+        print drawArray['X']
+        print drawArray['Y']
+        print drawArray['MAGNETIC']
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        surf = ax.plot_surface(drawArray['X'], drawArray['Y'], drawArray['MAGNETIC'],rstride=1, cstride=1, alpha=1,cmap=cm.jet,  linewidth=0)
+        fig.colorbar(surf, shrink=0.5, aspect=5)
         plt.show()
-
-    def showCpOnFingerpintAp(self, arg):
-        pass
-
-######################################################################################################################
-    '''methods to preapre drawing fingerprint maps - RSSI MAGNETIC '''
-
-    '''method append list for drawing'''
-    def appendDrawList(self,tList,mainList):
-        for t in tList:
-            mainList.append(t)
-
-    ''''method for preapring good drawing'''
-    def preapreBetterDrawing(self,tList,length, choice):
-        tmp = []
-        if choice == 'X':
-            for t in tList:
-                for i in range(0,length):
-                    tmp.append(t)
-            #print tList
-        elif choice == 'Y':
-            for i in range(0,length):
-                for t in tList:
-                    tmp.append(t)
-        return tmp
-##########################################################################################################################
+###############################################################################
     def menu(self):
 
         while(True):
             time.sleep(1)
-            msg = 'MAGNETIC(0) OR AP FINGERPRINT(1) or QUIT(q)'
-            anws = raw_input(msg)
+            anws = raw_input('''
+            q - quit
+            0 - show magnetic fingerprint - kuznia
+            1 - show rssi fingerprint - kuznia''')
 
             if anws == 'q':
-                sys.exit(0)
                 break
             elif anws == '0':
                 self.drawFingerprintMagnetic()
