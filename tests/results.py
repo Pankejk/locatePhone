@@ -18,9 +18,12 @@ class Results(object):
         cursor = self.coll.find({'CHECKPOINT' : chooseAp})
         docs = [res for res in cursor]
         for doc in docs:
-            print doc['RESULT'][self.STATISTIC_NAME[sd]]
-            #for key , value in doc.items():
-            #    print key + ' ' + str(value)
+            if doc['FINGERPRINT_MAP'] == 'RSSI':
+                print 'RSSI_MAP'
+                print doc['RESULTS'][self.STATISTIC_NAME[sd]]
+            elif doc['FINGERPRINT_MAP'] == 'MAGNETIC':
+                print 'MAGNETIC_MAP'
+                print doc['RESULTS'][self.STATISTIC_NAME[sd]]
 
 
 

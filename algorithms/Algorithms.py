@@ -57,6 +57,7 @@ class Algorithms (object):
         self.checkpointStatistic = []
         self.locateCheckpoint = {}
         self.sumDiff = {}
+        self.sumDiffMac = {}
         self.allDiff = {}
 
         self.loadCheckPoints()
@@ -249,6 +250,7 @@ class Algorithms (object):
         this method can implement diffrent algorithm'''
     def countSumStatisticalDiffrence(self):
         self.eucledianSumDifference()
+        self.eucledianSumDifferenceMac()
 
     '''method is choosing points which has the smallest diffrence with points in fingerprintmap
        points are choosen accordingly to statistic data
@@ -257,10 +259,6 @@ class Algorithms (object):
     def choosePointsOnMap(self):
         self.choosePointsOnMapEucledian()
 
-    #'''method can sort sum of diffrences in relation of statistic data and points in rssi and magnetic map
-    #    method can implement diffrent sorting'''
-    #def sortSumStatisticalDiffrence(self):
-    #    self.sortEucledianSumDiffrence()
 
     '''method counts location at the RSSI and magnetic map
        method counts location for all statistic data
@@ -300,12 +298,37 @@ class Algorithms (object):
 ###############################################################################
     '''eucledian implemetation'''
 
-    ''' method preapre list to keep sum of all difference between certain CP for certain point at rssi map and magnetic map
+    ''' method preapre list to keep sum of all difference between certain CP
+        for certain point at rssi map and magnetic map
         eventaully list can be sorted by diffrent statistics'''
     def preapreSumDiffEucledian(self):
         self.sumDiff = {}
         self.sumDiff['RSSI'] = []
         self.sumDiff['MAGNETIC'] = []
+        for x in self.x_distinct:
+            for y in self.y_distinct:
+                tmpDicAp = {}
+                tmpDicAp['X_FINGERPRINT'] = x
+                tmpDicAp['Y_FINGERPRINT'] = y
+
+                tmpDicMagnetic = {}
+                tmpDicMagnetic['X_FINGERPRINT'] = x
+                tmpDicMagnetic['Y_FINGERPRINT'] = y
+                for dataStatistic in self.STATISTIC_NAME:
+                    name = 'SUM_DIFF_' + dataStatistic
+                    tmpDicMagnetic[name] = 0
+                    tmpDicAp[name] = 0
+                self.sumDiff['RSSI'].append(tmpDicAp)
+                self.sumDiff['MAGNETIC'].append(tmpDicMagnetic)
+
+
+    ''' method preapre list to keep sum of all difference between certain CP
+        for certain point at rssi(certain AP) map and magnetic map
+        eventaully list can be sorted by diffrent statistics'''
+    def preapreSumDiffMacEucledian(self):
+        self.sumDiffMac = {}
+        self.sumDiffMac['RSSI'] = []
+        self.sumDiffMac['MAGNETIC'] = []
         for x in self.x_distinct:
             for y in self.y_distinct:
                 for mac in self.mac_fingerprint_distinct:
@@ -321,8 +344,8 @@ class Algorithms (object):
                         name = 'SUM_DIFF_' + dataStatistic
                         tmpDicMagnetic[name] = 0
                         tmpDicAp[name] = 0
-                    self.sumDiff['RSSI'].append(tmpDicAp)
-                    self.sumDiff['MAGNETIC'].append(tmpDicMagnetic)
+                    self.sumDiffMac['RSSI'].append(tmpDicAp)
+                    self.sumDiffMac['MAGNETIC'].append(tmpDicMagnetic)
 
     ''' method preapre list to keep all diffrence beerween CP and all points in magnetic and rssi map '''
     def prepareAllDiffEucledian(self):
@@ -341,6 +364,7 @@ class Algorithms (object):
 
     ''' method preapres class for coutings for next checkpoint'''
     def beforeLocateEucledian(self):
+        self.preapreSumDiffMacEucledian()
         self.preapreSumDiffEucledian()
         self.prepareAllDiffEucledian()
         self.prepareLocateCheckpointEucledian()
@@ -405,12 +429,34 @@ class Algorithms (object):
                 #diff['STATISTICS_DIFF']
                 self.allDiff['MAGNETIC'].append(diff)
 
+    '''method sums all diffrences accordingly to dataStatistic for each point on rssi(certain AP) and amgnetic map '''
+    def eucledianSumDifferenceMac(self):
+        ''' suming rssi data in certain points'''
+        for doc in self.allDiff['RSSI']:
+            for sumDoc in self.sumDiffMac['RSSI']:
+                if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['Y_FINGERPRINT'] == sumDoc['Y_FINGERPRINT'] and doc['MAC_AP'] == sumDoc['MAC_AP']:
+                    for dataStatistic in self.STATISTIC_NAME:
+                        name = 'SUM_DIFF_' + dataStatistic
+                        #print doc
+                        sumDoc[name] += doc[dataStatistic]
+        print 'AFTER SUMING RSSI FINGERPRINT MAP'
+
+        ''' suming magnetic data in certain points'''
+        for doc in self.allDiff['MAGNETIC']:
+            for sumDoc in self.sumDiffMac['MAGNETIC']:
+                if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['Y_FINGERPRINT'] == sumDoc['Y_FINGERPRINT']:
+                    for dataStatistic in self.STATISTIC_NAME:
+                        name = 'SUM_DIFF_' + dataStatistic
+                        sumDoc[name] += doc[dataStatistic]
+        print 'AFTER SUMING MAGNETIC FINGERPRINT MAP'
+        #print self.sumDiff['RSSI']
+
     '''method sums all diffrences accordingly to dataStatistic for each point on rssi and amgnetic map '''
     def eucledianSumDifference(self):
         ''' suming rssi data in certain points'''
         for doc in self.allDiff['RSSI']:
             for sumDoc in self.sumDiff['RSSI']:
-                if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['MAC_AP'] == sumDoc['MAC_AP']:
+                if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['Y_FINGERPRINT'] == sumDoc['Y_FINGERPRINT']:
                     for dataStatistic in self.STATISTIC_NAME:
                         name = 'SUM_DIFF_' + dataStatistic
                         #print doc
@@ -420,12 +466,11 @@ class Algorithms (object):
         ''' suming magnetic data in certain points'''
         for doc in self.allDiff['MAGNETIC']:
             for sumDoc in self.sumDiff['MAGNETIC']:
-                if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT']:
+                if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['Y_FINGERPRINT'] == sumDoc['Y_FINGERPRINT']:
                     for dataStatistic in self.STATISTIC_NAME:
                         name = 'SUM_DIFF_' + dataStatistic
                         sumDoc[name] += doc[dataStatistic]
         print 'AFTER SUMING MAGNETIC FINGERPRINT MAP'
-        #print self.sumDiff['RSSI']
 
     ''' method chooses points on rssi and magnetic map for eucledian distnace algorithm'''
     def choosePointsOnMapEucledian(self):
@@ -468,11 +513,12 @@ class Algorithms (object):
             0 - show checkpoint on acces point map
             1 - show checkpoint on magnetic field map
             2 - show list of diffrence
-            3 - show list of summ diffrence''')
+            3 - show list of sum diffrence
+            4 - show list of sum diffence for certain mac''')
             if anws == 'q':
                 break
             elif anws == '0':
-                anws = int(raw_input('''This are all checkpoints: %s. Choose(0,%s)''' % (str(self.mac_fingerprint_distinct), len(self.mac_fingerprint_distinct))))
+                anws = int(raw_input('''This are all macs: %s. Choose(0,%s)''' % (str(self.mac_fingerprint_distinct), len(self.mac_fingerprint_distinct))))
                 self.showCheckpointOnMapAp(anws)
             elif anws == '1':
                 self.showCheckpointOnMapMagnetic()
@@ -480,13 +526,16 @@ class Algorithms (object):
                 self.showTableOfDiffrence()
             elif anws == '3':
                 self.showsSumAllDiff()
+            elif anws == '4':
+                anws = int(raw_input('%s\nChoose mac(0-%s): ' % (str(self.mac_fingerprint_distinct), len(self.mac_fingerprint_distinct))))
+                self.showSumDiffMac(anws)
 
     """method chooses best points in map accordingly to AP and draw it on graph"""
     def showCheckpointOnMapAp(self,macChoice):
         macAp = self.mac_fingerprint_distinct[macChoice]
 
         diffApDocs = []
-        for item in self.sumDiff['RSSI']:
+        for item in self.sumDiffMac['RSSI']:
             if item['MAC_AP'] == macAp:
                 diffApDocs.append(item)
 
@@ -537,24 +586,57 @@ class Algorithms (object):
     def slowDownLoop(self):
         time.sleep(0.5)
 
-    """clean debugging variables"""
-    def beforeDebugg(self):
-        self.debugAllDiff = []
 
 ###############################################################################
     """ method shows diff table for magnetic or certain AP """
     def showTableOfDiffrence(self):
-        anws  = int(raw_input('How many records?(1-%s)' % len(self.allDiff)))
-        for i in range(anws):
-            print self.allDiff[i]
+        anws = int(raw_input('MAGNETIC(0) or RSSI(1)'))
+        if anws == 1:
+            anws  = raw_input('X - %s\nY - %s Choose coordinates(x y): ' % (str(self.x_distinct), str(self.y_distinct)))
+            anws.replace('\n','')
+            anws = anws.split(' ')
+            anws[0] = int(anws[0])
+            anws[1] = int(anws[1])
+            for record in self.allDiff['RSSI']:
+                if record['X_FINGERPRINT'] == anws[0] and record['Y_FINGERPRINT'] == anws[1]:
+                    print record
+        elif anws == 0:
+            anws  = raw_input('X - %s\nY - %s Choose coordinates(x y): ' % (str(self.x_distinct), str(self.y_distinct)))
+            anws.replace('\n','')
+            anws = anws.split(' ')
+            anws[0] = int(anws[0])
+            anws[1] = int(anws[1])
+            for record in self.allDiff['MAGNETIC']:
+                if record['X_FINGERPRINT'] == anws[0] and record['Y_FINGERPRINT'] == anws[1]:
+                    print record
 
     """method shows sumdiff table"""
     def showsSumAllDiff(self):
-        anws  = int(raw_input('How many records?(1-%s)' % len(self.sumDiff)))
-        for i in range(anws):
-            print self.sumDiff[i]
+        anws = int(raw_input('MAGNETIC(0) or RSSI(1)'))
+        if anws == 1:
+            anws  = raw_input('X - %s\nY - %s Choose coordinates(x y): ' % (str(self.x_distinct), str(self.y_distinct)))
+            anws.replace('\n','')
+            anws = anws.split(' ')
+            anws[0] = int(anws[0])
+            anws[1] = int(anws[1])
+            for record in self.sumDiff['RSSI']:
+                if record['X_FINGERPRINT'] == anws[0] and record['Y_FINGERPRINT'] == anws[1]:
+                    print record
+        elif anws == 0:
+            anws  = raw_input('X - %s\nY - %s Choose coordinates(x y): ' % (str(self.x_distinct), str(self.y_distinct)))
+            anws.replace('\n','')
+            anws = anws.split(' ')
+            anws[0] = int(anws[0])
+            anws[1] = int(anws[1])
+            for record in self.sumDiff['MAGNETIC']:
+                if record['X_FINGERPRINT'] == anws[0] and record['Y_FINGERPRINT'] == anws[1]:
+                    print record
 
-    """method shows loc"""
+    """method shows sumdiffMac table"""
+    def showSumDiffMac(self,mac):
+        for record in self.sumDiffMac['RSSI']:
+            if record['MAC_AP'] == self.mac_fingerprint_distinct[mac]:
+                print record
 ################################################################################
     '''starts locating device on RSSI and magnetic map
        with defined algorithm in constructor'''
