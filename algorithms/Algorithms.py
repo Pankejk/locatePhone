@@ -273,8 +273,10 @@ class Algorithms (object):
             tmp = [0,0]
             for coordinates in tmpList:
                 tmp[0] += coordinates['X_FINGERPRINT']
-                tmp[0] += coordinates['Y_FINGERPRINT']
+                tmp[1] += coordinates['Y_FINGERPRINT']
 
+            print 'RSSI'
+            print tmp
             resultDic['RSSI']['RESULTS'][dataStatistic]['X'] = tmp[0]/float(len(tmpList))
             resultDic['RSSI']['RESULTS'][dataStatistic]['Y'] = tmp[1]/float(len(tmpList))
             resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['X'] = abs(resultDic['RSSI']['RESULTS'][dataStatistic]['X'] - resultDic['RSSI']['CHECKPOINT_COORDINATES']['X'])
@@ -285,8 +287,9 @@ class Algorithms (object):
             tmp = [0,0]
             for coordinates in tmpList:
                 tmp[0] += coordinates['X_FINGERPRINT']
-                tmp[0] += coordinates['Y_FINGERPRINT']
-
+                tmp[1] += coordinates['Y_FINGERPRINT']
+            print 'MAGNETIC'
+            print tmp
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] = tmp[0]/float(len(tmpList))
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['Y'] = tmp[1]/float(len(tmpList))
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['X'] = abs(resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] - resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['X'])
@@ -328,7 +331,6 @@ class Algorithms (object):
     def preapreSumDiffMacEucledian(self):
         self.sumDiffMac = {}
         self.sumDiffMac['RSSI'] = []
-        self.sumDiffMac['MAGNETIC'] = []
         for x in self.x_distinct:
             for y in self.y_distinct:
                 for mac in self.mac_fingerprint_distinct:
@@ -337,15 +339,10 @@ class Algorithms (object):
                     tmpDicAp['Y_FINGERPRINT'] = y
                     tmpDicAp['MAC_AP'] = mac
 
-                    tmpDicMagnetic = {}
-                    tmpDicMagnetic['X_FINGERPRINT'] = x
-                    tmpDicMagnetic['Y_FINGERPRINT'] = y
                     for dataStatistic in self.STATISTIC_NAME:
                         name = 'SUM_DIFF_' + dataStatistic
-                        tmpDicMagnetic[name] = 0
                         tmpDicAp[name] = 0
                     self.sumDiffMac['RSSI'].append(tmpDicAp)
-                    self.sumDiffMac['MAGNETIC'].append(tmpDicMagnetic)
 
     ''' method preapre list to keep all diffrence beerween CP and all points in magnetic and rssi map '''
     def prepareAllDiffEucledian(self):
@@ -440,15 +437,6 @@ class Algorithms (object):
                         #print doc
                         sumDoc[name] += doc[dataStatistic]
         print 'AFTER SUMING RSSI FINGERPRINT MAP'
-
-        ''' suming magnetic data in certain points'''
-        for doc in self.allDiff['MAGNETIC']:
-            for sumDoc in self.sumDiffMac['MAGNETIC']:
-                if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['Y_FINGERPRINT'] == sumDoc['Y_FINGERPRINT']:
-                    for dataStatistic in self.STATISTIC_NAME:
-                        name = 'SUM_DIFF_' + dataStatistic
-                        sumDoc[name] += doc[dataStatistic]
-        print 'AFTER SUMING MAGNETIC FINGERPRINT MAP'
         #print self.sumDiff['RSSI']
 
     '''method sums all diffrences accordingly to dataStatistic for each point on rssi and amgnetic map '''
@@ -477,10 +465,12 @@ class Algorithms (object):
 
         '''choosing points on rssi map '''
         for doc in self.sumDiff['RSSI']:
-                self.sortEucledianSumDiffrence(self.locateCheckpoint['RSSI'],doc)
+            #print 'RSSI - SORT'
+            self.sortEucledianSumDiffrence(self.locateCheckpoint['RSSI'],doc)
 
         '''choosing points on magnetic map '''
         for doc in self.sumDiff['MAGNETIC']:
+            #print 'MAGNETIC - SORT'
             self.sortEucledianSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
 
     '''method chooses position with the smallest diffrence on map and put it to list accordingly to statistic data '''
@@ -493,6 +483,11 @@ class Algorithms (object):
                     locateDic[dataStatistic].append(doc)
             else:
                 locateDic[dataStatistic]= sorted(locateDic[dataStatistic], key=lambda x: x[name])
+                #raw_input()
+                #print name
+                #print doc
+                #print
+                #print locateDic[dataStatistic]
                 #raw_input()
                 if locateDic[dataStatistic][-1][name] > doc[name]:
                     locateDic[dataStatistic][-1] = doc
