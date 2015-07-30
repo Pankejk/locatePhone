@@ -371,14 +371,14 @@ class CleanData(object):
                     missingCheckpoints.append(checkpointLocate)
         anws = raw_input('%s\nThese checkpoints are not present in file: %s. Do you want to delete them from collection?(y/n) ' % (str(missingCheckpoints), dirList[anws]))
         if anws == 'y':
-            print 'NUMBER OF DOCUMENTS BEFORE REMOVING CHECKPOINT FROM COLLECTION %s : %s' %  (self.collName, len(self.coll_locate.count()))
+            print 'NUMBER OF DOCUMENTS BEFORE REMOVING CHECKPOINT FROM COLLECTION %s : %s' %  (self.collName, self.coll_locate.count())
             for missingCheckpoint in missingCheckpoints:
                 cursor = self.coll_locate.find({'CHECKPOINT': missingCheckpoint})
                 docs = [res for res in cursor]
 
                 for doc in docs:
                     self.coll_locate.remove({'_id': doc['_id']})
-            print 'NUMBER OF DOCUMENTS AFTER REMOVING CHECKPOINT FROM COLLECTION %s : %s' %  (self.collName, len(self.coll_locate.count()))
+            print 'NUMBER OF DOCUMENTS AFTER REMOVING CHECKPOINT FROM COLLECTION %s : %s' %  (self.collName, self.coll_locate.count())
         elif anws == 'n':
             pass
 ################################################################################
