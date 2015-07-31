@@ -124,7 +124,8 @@ class Algorithms (object):
                 break
         return anws
 
-    '''Method gain information about how many AP was used to compare checkpoint in certain coordinates'''
+    '''Method gain information about how many AP was used to compare checkpoint
+    in certain coordinates'''
     def prepareCheckpointStatistic(self):
         self.checkpointStatistic = []
         for x in self.x_distinct:
@@ -135,7 +136,8 @@ class Algorithms (object):
                 tmpDict['USED_AP'] = []
                 self.checkpointStatistic.append(tmpDict)
 
-    '''method is gaining mac addres of AP used in certain coordinate for certain checkpoint'''
+    '''method is gaining mac addres of AP used in certain coordinate for certain
+    checkpoint'''
     def assignCheckpointStatistics(self, x,y, mac):
         for item in self.checkpointStatistic:
             if item['X_FINGERPRINT'] == x and item['Y_FINGERPRINT'] == y:
@@ -160,24 +162,18 @@ class Algorithms (object):
                         rDic['FINGERPRINT_COORDINATES'] = tmpDic
                         rList.append(rDic)
                 resultDict['USED_AP'][dataStatistic] = rList
-                #!!!!!!!!!print resultDict
 
 
     '''method prepare result dictonary with choosen points fo certain statistic data'''
     def resultChosenPoints(self,resultDict, chosenPointsDict):
         for dataStatistic in self.STATISTIC_NAME:
             name = 'SUM_DIFF_' + dataStatistic
-            #print chosenPointsDict['RSSI'][dataStatistic]
-
             tmpList = []
             for element in chosenPointsDict['RSSI'][dataStatistic]:
                 tmpDic = {}
                 tmpDic['X_FINGERPRINT'] = element['X_FINGERPRINT']
                 tmpDic['Y_FINGERPRINT'] = element['Y_FINGERPRINT']
                 tmpDic[name] = element[name]
-                #print 'element'
-                #print tmpDic
-                #raw_input()
                 tmpList.append(tmpDic)
             resultDict['RSSI']['CHOSEN_POINTS'][dataStatistic] = tmpList
 
@@ -189,63 +185,65 @@ class Algorithms (object):
                 tmpDic[name] = element[name]
                 tmpListMagnetic.append(tmpDic)
 
-            #print '1'
-            #print resultDict['RSSI']['CHOSEN_POINTS'][dataStatistic]
-            #raw_input()
-
             resultDict['MAGNETIC']['CHOSEN_POINTS'][dataStatistic] = tmpListMagnetic
-            #print 'nice'
-            #print resultDict['MAGNETIC']['CHOSEN_POINTS'][dataStatistic]
-            #print
-            #print resultDict['RSSI']['CHOSEN_POINTS'][dataStatistic]
-            #raw_input()
 
     ''' method preapres dictonary with results of any algorithm'''
     def resultDictonary(self, docDict):
-        doc={}
-        doc['IP_PHONE'] = self.ipPhone
-        doc['MAC_PHONE'] = self.macPhone
-        doc['PLACE'] = self.place
-        doc['CHECKPOINT'] = self.currentCheckpoint
+
+        """result RSSI dictonary"""
+        docAp={}
+        docAp['IP_PHONE'] = self.ipPhone
+        docAp['MAC_PHONE'] = self.macPhone
+        docAp['PLACE'] = self.place
+        docAp['CHECKPOINT'] = self.currentCheckpoint
         coordinatesCheckpoint = {}
         coordinatesCheckpoint['X'] = float(self.checkPoints[self.currentCheckpoint]['X'])
         coordinatesCheckpoint['Y'] = float(self.checkPoints[self.currentCheckpoint]['Y'])
-        doc['CHECKPOINT_COORDINATES'] = coordinatesCheckpoint
-        doc['CHOSEN_POINTS'] ={}
-        doc['RESULTS'] = {}
-        doc['USED_AP'] = {}
+        docAp['CHECKPOINT_COORDINATES'] = coordinatesCheckpoint
+        docAp['CHOSEN_POINTS'] ={}
+        docAp['RESULTS'] = {}
+        docAp['USED_AP'] = {}
 
         for dataStatistic in self.STATISTIC_NAME:
-            doc['CHOSEN_POINTS'][dataStatistic] = []
+            docAp['CHOSEN_POINTS'][dataStatistic] = []
 
             tmp = {}
             tmp['X'] = 0
             tmp['Y'] = 0
             tmp['ERROR'] = {'X': 0,'Y': 0}
-            doc['RESULTS'][dataStatistic] = tmp
+            docAp['RESULTS'][dataStatistic] = tmp
 
-            #tmp = {}
-            #tmp[dataStatistic] = {'LIST_AP' : [] , 'SIZE_OF_LIST': 0}
-            doc['USED_AP'][dataStatistic] = []#{'FINGERPRINT_COORDINATES' : {'X':0,'Y': 0},'LIST_AP' : [] , 'SIZE_OF_LIST': 0}
+            docAp['USED_AP'][dataStatistic] = []
 
+        docAp['FINGERPRINT_MAP'] = 'RSSI'
+        docDict['RSSI'] = docAp
 
-        doc['FINGERPRINT_MAP'] = 'RSSI'
-        docDict['RSSI'] = doc
-        mDoc = dict(doc)
-        del mDoc['USED_AP']
-        print doc['RESULTS'] is mDoc['RESULTS']
-        mDoc['FINGERPRINT_MAP'] = 'MAGNETIC'
-        docDict['MAGNETIC'] = mDoc
+        """magnetic result dictonary"""
+        docMagnetic={}
+        docMagnetic['IP_PHONE'] = self.ipPhone
+        docMagnetic['MAC_PHONE'] = self.macPhone
+        docMagnetic['PLACE'] = self.place
+        docMagnetic['CHECKPOINT'] = self.currentCheckpoint
+        coordinatesCheckpoint = {}
+        coordinatesCheckpoint['X'] = float(self.checkPoints[self.currentCheckpoint]['X'])
+        coordinatesCheckpoint['Y'] = float(self.checkPoints[self.currentCheckpoint]['Y'])
+        docMagnetic['CHECKPOINT_COORDINATES'] = coordinatesCheckpoint
+        docMagnetic['CHOSEN_POINTS'] ={}
+        docMagnetic['RESULTS'] = {}
 
-        print docDict['RSSI']
-        print
-        print docDict['MAGNETIC']
-        print
+        for dataStatistic in self.STATISTIC_NAME:
+            docMagnetic['CHOSEN_POINTS'][dataStatistic] = []
+
+            tmp = {}
+            tmp['X'] = 0
+            tmp['Y'] = 0
+            tmp['ERROR'] = {'X': 0,'Y': 0}
+            docMagnetic['RESULTS'][dataStatistic] = tmp
+
+        docMagnetic['FINGERPRINT_MAP'] = 'MAGNETIC'
+        docDict['MAGNETIC'] = docMagnetic
+
         self.resultChosenPoints(docDict, self.locateCheckpoint)
-        print docDict['RSSI']
-        print
-        print docDict['MAGNETIC']
-        raw_input()
         self.resultUsedAp(docDict['RSSI'])
 
 ###############################################################################
@@ -257,22 +255,22 @@ class Algorithms (object):
         self.prepareCheckpointStatistic()
         self.beforeLocateEucledian()
 
-    '''method counts diffrences beetween single checkpoint and all positions in fingerprint map
-       method runs one of two algorithm to count diffrence
+    '''method counts diffrences beetween single checkpoint and all positions in
+       fingerprint map method runs one of two algorithm to count diffrence
        method counts diffences in RSSI and magnetic fingerprint
        diffrences are counted for all statistic data
        other algorithm determine chooseCheckpoints and countLocationError'''
     def countDifference(self):
         self.eucledianDifference()
 
-    ''' method is suming all diffrences in corelation with coordinates of rssi and magnetic map
-        this method can implement diffrent algorithm'''
+    ''' method is suming all diffrences in corelation with coordinates of rssi
+        and magnetic map this method can implement diffrent algorithm'''
     def countSumStatisticalDiffrence(self):
         self.eucledianSumDifference()
         self.eucledianSumDifferenceMac()
 
-    '''method is choosing points which has the smallest diffrence with points in fingerprintmap
-       points are choosen accordingly to statistic data
+    '''method is choosing points which has the smallest diffrence with points
+       in fingerprintmap points are choosen accordingly to statistic data
        points are choosen parallelly from RSSI and magnetic data
        method can choose one of available methods for choosing points'''
     def choosePointsOnMap(self):
@@ -281,7 +279,8 @@ class Algorithms (object):
 
     '''method counts location at the RSSI and magnetic map
        method counts location for all statistic data
-       method for each above possibilities counts error according to checkpoint coordinates'''
+       method for each above possibilities counts error according to checkpoint
+       coordinates'''
     def countLocationAndError(self):
         resultDic = {}
         self.resultDictonary(resultDic)
@@ -297,9 +296,6 @@ class Algorithms (object):
                 tmp[0] += coordinates['X_FINGERPRINT']
                 tmp[1] += coordinates['Y_FINGERPRINT']
 
-            print 'RSSI'
-            print tmpListAp
-            #print tmp
             resultDic['RSSI']['RESULTS'][dataStatistic]['X'] = tmp[0]/float(len(tmpListAp))
             resultDic['RSSI']['RESULTS'][dataStatistic]['Y'] = tmp[1]/float(len(tmpListAp))
             resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['X'] = abs(resultDic['RSSI']['RESULTS'][dataStatistic]['X'] - resultDic['RSSI']['CHECKPOINT_COORDINATES']['X'])
@@ -311,18 +307,14 @@ class Algorithms (object):
             for coordinates in tmpList:
                 tmp[0] += coordinates['X_FINGERPRINT']
                 tmp[1] += coordinates['Y_FINGERPRINT']
-            print 'MAGNETIC'
-            print t
-            #print tmpList
-            raw_input()
-            #print tmp
+
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] = tmp[0]/float(len(tmpList))
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['Y'] = tmp[1]/float(len(tmpList))
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['X'] = abs(resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] - resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['X'])
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['Y'] = abs(resultDic['MAGNETIC']['RESULTS'][dataStatistic]['Y'] - resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['Y'])
+        print 'AFTER COUNTING LOCALISATION AND LOCALISATION ERROR'
         self.insertResult(resultDic['RSSI'])
         self.insertResult(resultDic['MAGNETIC'])
-        #self.countLocationAndErrorEucledian()
 
 ###############################################################################
     '''eucledian implemetation'''
@@ -370,7 +362,8 @@ class Algorithms (object):
                         tmpDicAp[name] = 0
                     self.sumDiffMac['RSSI'].append(tmpDicAp)
 
-    ''' method preapre list to keep all diffrence beerween CP and all points in magnetic and rssi map '''
+    ''' method preapre list to keep all diffrence beerween CP and all points in
+    magnetic and rssi map '''
     def prepareAllDiffEucledian(self):
         self.allDiff = {}
         self.allDiff['RSSI'] = []
@@ -392,7 +385,8 @@ class Algorithms (object):
         self.prepareAllDiffEucledian()
         self.prepareLocateCheckpointEucledian()
 
-    '''method counts diffrence beetween checkpoint gain data and each point of fingerprintmap as eucledian distance
+    '''method counts diffrence beetween checkpoint gain data and each point of
+    fingerprintmap as eucledian distance
        method counts it for RSSI map and magnetic map
        method counts diffrence beetween statistic data declared in STATISTIC_NAME'''
     def eucledianDifference(self):
@@ -449,7 +443,8 @@ class Algorithms (object):
         if self.currentCheckpoint == '2':
             print self.allDiff['MAGNETIC']
 
-    '''method sums all diffrences accordingly to dataStatistic for each point on rssi(certain AP) and amgnetic map '''
+    '''method sums all diffrences accordingly to dataStatistic for each point
+    on rssi(certain AP) and amgnetic map '''
     def eucledianSumDifferenceMac(self):
         ''' suming rssi data in certain points'''
         for doc in self.allDiff['RSSI']:
@@ -460,7 +455,8 @@ class Algorithms (object):
                         sumDoc[name] += doc[dataStatistic]
         print 'AFTER SUMING RSSI FINGERPRINT MAP'
 
-    '''method sums all diffrences accordingly to dataStatistic for each point on rssi and amgnetic map '''
+    '''method sums all diffrences accordingly to dataStatistic for each point
+    on rssi and amgnetic map '''
     def eucledianSumDifference(self):
         ''' suming rssi data in certain points'''
         for doc in self.allDiff['RSSI']:
@@ -468,10 +464,7 @@ class Algorithms (object):
                 if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['Y_FINGERPRINT'] == sumDoc['Y_FINGERPRINT']:
                     for dataStatistic in self.STATISTIC_NAME:
                         name = 'SUM_DIFF_' + dataStatistic
-                        #print doc
                         sumDoc[name] += doc[dataStatistic]
-                        #print sumDoc
-                        #raw_input()
         print 'AFTER SUMING RSSI FINGERPRINT MAP'
 
         ''' suming magnetic data in certain points'''
@@ -482,29 +475,25 @@ class Algorithms (object):
                         name = 'SUM_DIFF_' + dataStatistic
                         sumDoc[name] += doc[dataStatistic]
         print 'AFTER SUMING MAGNETIC FINGERPRINT MAP'
-        if self.currentCheckpoint == '2':
-            print self.sumDiff['MAGNETIC']
-            raw_input()
+        #if self.currentCheckpoint == '2':
+            #print self.sumDiff['MAGNETIC']
+            #raw_input()
 
-    ''' method chooses points on rssi and magnetic map for eucledian distnace algorithm'''
+    ''' method chooses points on rssi and magnetic map for eucledian distnace
+    algorithm'''
     def choosePointsOnMapEucledian(self):
 
         '''choosing points on rssi map '''
         for doc in self.sumDiff['RSSI']:
-            #print 'RSSI - SORT'
             self.sortEucledianSumDiffrence(self.locateCheckpoint['RSSI'],doc)
-            #print self.locateCheckpoint['RSSI']
-            #raw_input()
 
         '''choosing points on magnetic map '''
         for doc in self.sumDiff['MAGNETIC']:
             print 'MAGNETIC - SORT'
             self.sortEucledianSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
-            if self.currentCheckpoint == '2':
-                print self.locateCheckpoint['MAGNETIC']
-                raw_input()
 
-    '''method chooses position with the smallest diffrence on map and put it to list accordingly to statistic data '''
+    '''method chooses position with the smallest diffrence on map and put it to
+    list accordingly to statistic data '''
     def sortEucledianSumDiffrence(self, locateDic, doc):
         for dataStatistic in self.STATISTIC_NAME:
             if self.checkList(locateDic[dataStatistic],doc):
@@ -514,21 +503,9 @@ class Algorithms (object):
                     locateDic[dataStatistic].append(doc)
             else:
                 locateDic[dataStatistic]= sorted(locateDic[dataStatistic], key=lambda x: x[name])
-                #raw_input()
-                #print name
-                #print doc
-                #print
-                #print locateDic[dataStatistic]
-                #raw_input()
                 if locateDic[dataStatistic][-1][name] > doc[name]:
                     locateDic[dataStatistic][-1] = doc
 
-        #    self.sumDiff['RSSI'] = sorted(self.sumDiff['RSSI'], key=lambda x: x[name])
-        #    self.sumDiff['MAGNETIC'] = sorted(self.sumDiff['MAGNETIC'], key=lambda x: x[name])
-        #    self.locateCheckpoint['RSSI'][dataStatistic] = self.sumDiff['RSSI'][0:3]
-        #    self.locateCheckpoint['MAGNETIC'][dataStatistic] = self.sumDiff['MAGNETIC'][0:3]
-
-    #def countLocationAndErrorEucledian(self):
 ###############################################################################
     """set of methods for debugging locating algorithm"""
     def menu(self):
