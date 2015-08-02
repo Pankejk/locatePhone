@@ -263,6 +263,8 @@ class Algorithms (object):
             tmp['X'] = 0
             tmp['Y'] = 0
             tmp['ERROR'] = {'X': 0,'Y': 0}
+            tmp['ERROR_PERCENT'] = {'X': 0, 'Y': 0}
+            tmp['ERROR_COORDINATE'] = {'X': 0, 'Y': 0}
             docAp['RESULTS'][dataStatistic] = tmp
 
             docAp['USED_AP'][dataStatistic] = []
@@ -290,6 +292,8 @@ class Algorithms (object):
             tmp['X'] = 0
             tmp['Y'] = 0
             tmp['ERROR'] = {'X': 0,'Y': 0}
+            tmp['ERROR_PERCENT'] = {'X': 0, 'Y': 0}
+            tmp['ERROR_COORDINATE'] = {'X': 0, 'Y': 0}
             docMagnetic['RESULTS'][dataStatistic] = tmp
 
         docMagnetic['FINGERPRINT_MAP'] = 'MAGNETIC'
@@ -358,6 +362,10 @@ class Algorithms (object):
             resultDic['RSSI']['RESULTS'][dataStatistic]['Y'] = tmp[1]/float(len(tmpListAp))
             resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['X'] = abs(resultDic['RSSI']['RESULTS'][dataStatistic]['X'] - resultDic['RSSI']['CHECKPOINT_COORDINATES']['X'])
             resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['Y'] = abs(resultDic['RSSI']['RESULTS'][dataStatistic]['Y'] - resultDic['RSSI']['CHECKPOINT_COORDINATES']['Y'])
+            resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR_PERCENT']['X'] = (resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['X']/resultDic['RSSI']['CHECKPOINT_COORDINATES']['X']) * 100
+            resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR_PERCENT']['Y'] = (resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['Y']/resultDic['RSSI']['CHECKPOINT_COORDINATES']['Y']) * 100
+            resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR_COORDINATE']['X'] = (resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['X']/max(self.x_distinct)) * 100
+            resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR_COORDINATE']['Y'] = (resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['Y']/max(self.y_distinct)) * 100
 
             '''locating and counting error by magnetic map '''
             tmpList = resultDic['MAGNETIC']['CHOSEN_POINTS'][dataStatistic]
@@ -370,6 +378,11 @@ class Algorithms (object):
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['Y'] = tmp[1]/float(len(tmpList))
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['X'] = abs(resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] - resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['X'])
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['Y'] = abs(resultDic['MAGNETIC']['RESULTS'][dataStatistic]['Y'] - resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['Y'])
+            resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR_PERCENT']['X'] = (resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['X']/resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['X']) * 100
+            resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR_PERCENT']['Y'] = (resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['Y']/resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['Y']) * 100
+            resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR_COORDINATE']['X'] = (resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['X']/max(self.x_distinct)) * 100
+            resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR_COORDINATE']['Y'] = (resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['Y']/max(self.y_distinct)) * 100
+
         print 'AFTER COUNTING LOCALISATION AND LOCALISATION ERROR'
         self.insertResult(resultDic['RSSI'])
         self.insertResult(resultDic['MAGNETIC'])
