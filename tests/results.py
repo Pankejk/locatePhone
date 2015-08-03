@@ -18,7 +18,7 @@ class Results(object):
         self.coll = self.db[self.collname]
         self.distinctCp = self.coll.distinct('CHECKPOINT')
         self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE", "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50", "PERCENTILE - 70",  "PERCENTILE - 90"]
-
+        self.map = ['MAGNETIC', 'RSSI']
     def showSinglePoint(self, chooseAp, sd):
         cursor = self.coll.find({'CHECKPOINT' : chooseAp})
         docs = [res for res in cursor]
@@ -87,439 +87,339 @@ class Results(object):
 
     def countAlgorithmStatisticsError(self):
 
-        self.countWhenDataStatisticIfTheBest()
+        self.countWhenSumErrorTheSmallest()
         self.countDataStatisticsError()
 
     """method counts max. min. mode, mean of error per data statisitcs"""
     def countDataStatisticsError(self):
-        """take all RSSI documents from all checkpoints"""
-        cursor = self.coll.find({'FINGERPRINT_MAP': 'RSSI'})
-        rssiDocs = [res for res in cursor]
 
-        """take all magnetic documents from all checkpoints"""
-        cursor = self.coll.find({'FINGERPRINT_MAP': 'MAGNETIC'})
-        magneticDocs = [res for res in cursor]
+        resultAlgorithmDocs = {}
+        self.loadDataResult(resultAlgorithmDocs)
 
-        """counting the max,mean, mode, min error for data statistic"""
-        commonStatistics = {}
-        commonStatistics['MAGNETIC'] = {}
-        commonStatistics['RSSI'] = {}
+        errorDictonary = {}
+        self.preapreErrorDictonaryStatistics(errorDictonary)
 
-        for dataStatistics in self.STATISTIC_NAME:
-            commonStatistics['RSSI'][dataStatistics] = {}
-            tmpDic = {}
-            tmpDic['ERROR'] = []
-            tmpDic['ERROR_PERCENT'] = []
-            tmpDic['ERROR_COORDINATE'] = []
-            commonStatistics['RSSI'][dataStatistics] = tmpDic
-
-            commonStatistics['MAGNETIC'][dataStatistics] = {}
-            tmpDic = {}
-            tmpC = {}
-            tmpC['X'] = []
-            tmpC['Y'] = []
-            tmpDic['ERROR'] = tmpC
-
-            tmpC = {}
-            tmpC['X'] = []
-            tmpC['Y'] = []
-            tmpDic['ERROR_PERCENT'] = tmpC
-
-            tmpC = {}
-            tmpC['X'] = []
-            tmpC['Y'] = []
-            tmpDic['ERROR_COORDINATE'] = tmpC
-            commonStatistics['MAGNETIC'][dataStatistics] = tmpDic
-
-        for magneticDoc in magneticDocs:
-            for dataStatistics in self.STATISTIC_NAME:
-                tmpX = magneticDoc['RESULTS'][dataStatistics]['ERROR']['X']
-                tmpY = magneticDoc['RESULTS'][dataStatistics]['ERROR']['Y']
-                commonStatistics['MAGNETIC'][dataStatistics]['ERROR']['X'].append(tmpX)
-                commonStatistics['MAGNETIC'][dataStatistics]['ERROR']['Y'].append(tmpY)
-
-                tmpX = magneticDoc['RESULTS'][dataStatistics]['ERROR_PERCENT']['X']
-                tmpY = magneticDoc['RESULTS'][dataStatistics]['ERROR_PERCENT']['Y']
-                commonStatistics['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['X'].append(tmpX)
-                commonStatistics['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['Y'].append(tmpY)
-
-                tmpX = magneticDoc['RESULTS'][dataStatistics]['ERROR_COORDINATE']['X']
-                tmpY = magneticDoc['RESULTS'][dataStatistics]['ERROR_COORDINATE']['Y']
-                commonStatistics['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['X'].append(tmpX)
-                commonStatistics['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['Y'].append(tmpY)
-
-        for rssiDoc in rssiDocs:
-            for dataStatistics in self.STATISTIC_NAME:
-                tmpX = rssiDoc['RESULTS'][dataStatistics]['ERROR']['X']
-                tmpY = rssiDoc['RESULTS'][dataStatistics]['ERROR']['Y']
-                commonStatistics['RSSI'][dataStatistics]['ERROR']['X'].append(tmpX)
-                commonStatistics['RSSI'][dataStatistics]['ERROR']['Y'].append(tmpY)
-
-                tmpX = magneticDoc['RESULTS'][dataStatistics]['ERROR_PERCENT']['X']
-                tmpY = magneticDoc['RESULTS'][dataStatistics]['ERROR_PERCENT']['Y']
-                commonStatistics['RSSI'][dataStatistics]['ERROR_PERCENT']['X'].append(tmpX)
-                commonStatistics['RSSI'][dataStatistics]['ERROR_PERCENT']['Y'].append(tmpY)
-
-                tmpDic['X'] = magneticDoc['RESULTS'][dataStatistics]['ERROR_COORDINATE']['X']
-                tmpDic['Y'] = magneticDoc['RESULTS'][dataStatistics]['ERROR_COORDINATE']['Y']
-                commonStatistics['RSSI'][dataStatistics]['ERROR_COORDINATE']['X'].append(tmpX)
-                commonStatistics['RSSI'][dataStatistics]['ERROR_COORDINATE']['Y'].append(tmpY)
+        self.gainXAndYErrorStatistics(resultAlgorithmDocs,errorDictonary)
 
         resultStatistic = {}
         resultStatistic['MAGNETIC'] = {}
         resultStatistic['RSSI'] = {}
-        for dataStatistics in self.STATISTIC_NAME:
-                tmpDic = {}
-                data = commonStatistics['MAGNETIC'][dataStatistics]['ERROR']['X']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp = {}
-                tmp['X'] = tmpDic
-
-                tmpDic = {}
-                data = commonStatistics['MAGNETIC'][dataStatistics]['ERROR']['Y']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp['Y'] = tmpDic
-                resultStatistic['MAGNETIC'][dataStatistics] = {}
-                resultStatistic['MAGNETIC'][dataStatistics]['ERROR'] = tmp
-
-                tmpDic = {}
-                data = commonStatistics['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['X']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp = {}
-                tmp['X'] = tmpDic
-
-                tmpDic = {}
-                data = commonStatistics['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['Y']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp['Y'] = tmpDic
-                resultStatistic['MAGNETIC'][dataStatistics] = {}
-                resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT'] = tmp
-
-                tmpDic = {}
-                data = commonStatistics['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['X']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp = {}
-                tmp['X'] = tmpDic
-
-                tmpDic = {}
-                data = commonStatistics['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['Y']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp['Y'] = tmpDic
-                resultStatistic['MAGNETIC'][dataStatistics] = {}
-                resultStatistic['MAGNETIC'][dataStatistics]['ERROR_COORDINATE'] = tmp
-                ################################################################
-
-                tmpDic = {}
-                data = commonStatistics['RSSI'][dataStatistics]['ERROR']['X']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp = {}
-                tmp['X'] = tmpDic
-
-                tmpDic = {}
-                data = commonStatistics['RSSI'][dataStatistics]['ERROR']['Y']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp['Y'] = tmpDic
-
-                resultStatistic['RSSI'][dataStatistics] = {}
-                resultStatistic['RSSI'][dataStatistics]['ERROR'] = tmp
-
-                tmpDic = {}
-                data = commonStatistics['RSSI'][dataStatistics]['ERROR_PERCENT']['X']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp = {}
-                tmp['X'] = tmpDic
-
-                tmpDic = {}
-                data = commonStatistics['RSSI'][dataStatistics]['ERROR_PERCENT']['Y']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp['Y'] = tmpDic
-
-                resultStatistic['RSSI'][dataStatistics] = {}
-                resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT'] = tmp
-
-                tmpDic = {}
-                data = commonStatistics['RSSI'][dataStatistics]['ERROR_COORDINATE']['X']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp = {}
-                tmp['X'] = tmpDic
-
-                tmpDic = {}
-                data = commonStatistics['RSSI'][dataStatistics]['ERROR_COORDINATE']['Y']
-                tmpDic['MIN'] = min(data)
-                tmpDic['MAX'] = max(data)
-                tmp = list(scipy.stats.mode(data))
-                tmpDic['MODE'] = tmp[0].tolist()[0]
-                tmpDic['MEAN'] = np.mean(data)
-                tmpDic['STANDARD_DEVIATION'] = np.std(data)
-
-                tmp['Y'] = tmpDic
-
-                resultStatistic['RSSI'][dataStatistics] = {}
-                resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE'] = tmp
+        self.countErrorStatistics(errorDictonary,resultStatistic)
 
         fileList = []
-        firstLineFile = self.collname + '_MAGNETIC_DATA_STATISTICS_' + str(datetime.now()).replace(' ','_')
-        fileList.append(firstLineFile)
-        for dataStatistics in self.STATISTIC_NAME:
-            fileList.append(dataStatistics)
-            fileList.append('ERROR')
-            fileList.append('')
-            fileList.append('X')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR']['X']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR']['X']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR']['X']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR']['X']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR']['X']['STANDARD_DEVIATION'])
+        self.prepareLinesForCsvFileStatistics(resultStatistic, fileList)
 
-            fileList.append('')
-            fileList.append('Y')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR']['Y']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR']['Y']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR']['Y']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR']['Y']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR']['X']['STANDARD_DEVIATION'])
-
-            fileList.append('')
-            fileList.append('ERROR_PERCENT')
-            fileList.append('')
-            fileList.append('X')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['X']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['X']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['X']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['X']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['X']['STANDARD_DEVIATION'])
-
-            fileList.append('')
-            fileList.append('Y')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['Y']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['Y']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['Y']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['Y']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['Y']['STANDARD_DEVIATION'])
-
-            fileList.append('')
-            fileList.append('ERROR_COORDINATE')
-            fileList.append('')
-            fileList.append('X')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['X']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['X']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['X']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['X']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['X']['STANDARD_DEVIATION'])
-
-            fileList.append('')
-            fileList.append('Y')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['Y']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['Y']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['Y']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_COORDINATE']['Y']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['MAGNETIC'][dataStatistics]['ERROR_PERCENT']['Y']['STANDARD_DEVIATION'])
-
-        firstLineFile = self.collname + '_RSSI_DATA_STATISTICS_' + str(datetime.now()).replace(' ','_')
-        fileList.append(firstLineFile)
-        for dataStatistics in self.STATISTIC_NAME:
-            fileList.append(dataStatistics)
-            fileList.append('ERROR')
-            fileList.append('')
-            fileList.append('X')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR']['X']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR']['X']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR']['X']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR']['X']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR']['X']['STANDARD_DEVIATION'])
-
-            fileList.append('')
-            fileList.append('Y')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR']['Y']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR']['Y']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR']['Y']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR']['Y']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR']['Y']['STANDARD_DEVIATION'])
-
-            fileList.append('ERROR_PERCENT')
-            fileList.append('')
-            fileList.append('X')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT']['X']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT']['X']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT']['X']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT']['X']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT']['X']['STANDARD_DEVIATION'])
-
-            fileList.append('')
-            fileList.append('Y')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT']['Y']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT']['Y']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT']['Y']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT']['Y']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_PERCENT']['Y']['STANDARD_DEVIATION'])
-
-            fileList.append('ERROR_COORDINATE')
-            fileList.append('')
-            fileList.append('X')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE']['X']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE']['X']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE']['X']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE']['X']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE']['X']['STANDARD_DEVIATION'])
-
-            fileList.append('')
-            fileList.append('Y')
-            tmpRow = 'MIN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE']['Y']['MIN'])
-            tmpRow = 'MAX '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE']['Y']['MAX'])
-            tmpRow = 'MEAN '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE']['Y']['MEAN'])
-            tmpRow = 'MODE '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE']['Y']['MODE'])
-            tmpRow = 'STANDARD_DEVIATION '+ ' - ' + str(resultStatistic['RSSI'][dataStatistics]['ERROR_COORDINATE']['Y']['STANDARD_DEVIATION'])
-
-        firstLineFile = self.collname + '_DATA_STATISTICS' + str(datetime.now()).replace(' ','_')
-        self.writeToCsvFile(firstLineFile, fileList)
+        date = str(datetime.now()).replace(' ','_')
+        date = date.replace(':','-')
+        fileName = self.collname + '_DATA_STATISTICS_' + date
+        self.writeToCsvFile(fileName, fileList)
 
     """method search all checkpoints and shows the best data statistic for
-       localization"""
-    def countWhenDataStatisticIfTheBest(self):
+       localization - counting per document"""
+    def countWhenSumErrorTheSmallest(self):
+        resultAlgorithmDocs = {}
+        self.loadDataResult(resultAlgorithmDocs)
+
+        commonStatistics = {}
+        self.preapreCounterErrorDictonary(commonStatistics)
+
+        self.smallestErrorStatisticCounter(resultAlgorithmDocs, commonStatistics)
+
+        fileList = []
+        self.preapreLinesForCsvFileStatisticCounter(fileList, commonStatistics)
+        for line in fileList:
+            print line
+            raw_input()
+        date = str(datetime.now()).replace(' ','_')
+        date = date.replace(':','-')
+        firstLineFile = self.collname + '_DATA_STATISTICS_BEST_' + date
+        self.writeToCsvFile(firstLineFile, fileList)
+
+################################################################################
+    """method loads data from result databse to count statistics"""
+    def loadDataResult(self, docDict):
         """take all RSSI documents from all checkpoints"""
         cursor = self.coll.find({'FINGERPRINT_MAP': 'RSSI'})
-        rssiDocs = [res for res in cursor]
+        docDict['RSSI'] = [res for res in cursor]
 
         """take all magnetic documents from all checkpoints"""
         cursor = self.coll.find({'FINGERPRINT_MAP': 'MAGNETIC'})
-        magneticDocs = [res for res in cursor]
+        docDict['MAGNETIC'] = [res for res in cursor]
 
-        commonStatistics = {}
-        commonStatistics['MAGNETIC'] = {}
-        commonStatistics['RSSI'] = {}
 
-        commonStatistics['MAGNETIC']['LISTS'] = {}
-        commonStatistics['RSSI']['LISTS'] = {}
-
-        """choosing the best data statistic for locating"""
-        for dataStatistics in self.STATISTIC_NAME:
-            commonStatistics['MAGNETIC'][dataStatistics] = 0
-            tmpDict = dict()
-            tmpDict[dataStatistics] = list()
-            commonStatistics['MAGNETIC']['LISTS'] = tmpDict
-
-            commonStatistics['RSSI'][dataStatistics] = 0
-            tmpDict = dict()
-            tmpDict[dataStatistics] = list()
-            commonStatistics['RSSI']['LISTS'] = tmpDict
-
-        for magneticDoc in magneticDocs:
-            bestX = magneticDoc['RESULTS']['MEAN']['ERROR']['X']
-            bestY = magneticDoc['RESULTS']['MEAN']['ERROR']['Y']
-            errorSumBest = bestX + bestY
-            anwser = 'MEAN'
-            for dataStatistics in self.STATISTIC_NAME[1:]:
-                nextX = magneticDoc['RESULTS'][dataStatistics]['ERROR']['X']
-                nextY = magneticDoc['RESULTS'][dataStatistics]['ERROR']['Y']
-                errorSumNext = nextX + nextY
-                if errorSumBest > nextY:
-                    anwser = dataStatistics
-            commonStatistics['MAGNETIC'][anwser] += 1
-            commonStatistics['MAGNETIC']['LISTS'][anwser].append(magneticDoc)
-
-        for rssiDoc in rssiDocs:
-            bestX = rssiDoc['RESULTS']['MEAN']['ERROR']['X']
-            bestY = rssiDoc['RESULTS']['MEAN']['ERROR']['Y']
-            errorSumBest = bestX + bestY
-            anwser = 'MEAN'
-            for dataStatistics in self.STATISTIC_NAME[1:]:
-                nextX = rssiDoc['RESULTS'][dataStatistics]['ERROR']['X']
-                nextY = rssiDoc['RESULTS'][dataStatistics]['ERROR']['Y']
-                errorSumNext = nextX + nextY
-                if errorSumBest > nextY:
-                    anwser = dataStatistics
-            commonStatistics['RSSI'][anwser] += 1
-            commonStatistics['RSSI']['LISTS'][anwser].append(magneticDoc)
-
-        fileList = []
-        firstLineFile = self.collname + '_RSSI_DATA_STATISTICS_' + str(datetime.now()).replace(' ','_')
-        fileList.append(firstLineFile)
-        for dataStatistics in self.STATISTIC_NAME:
-            tmpRow = dataStatistics + ' - ' + str(commonStatistics['RSSI'][dataStatistics])
-            fileList.append(tmpRow)
-
-        firstLineFile = self.collname + '_MAGNETIC_DATA_STATISTICS_' + str(datetime.now()).replace(' ','_')
-        fileList.append('')
-        fileList.append(firstLineFile)
-        for dataStatistics in self.STATISTIC_NAME:
-            tmpRow = dataStatistics + ' - ' + str(commonStatistics['MAGNETIC'][dataStatistics])
-            fileList.append(tmpRow)
-
-        firstLineFile = self.collname + '_DATA_STATISTICS_BEST' + str(datetime.now()).replace(' ','_')
-        self.writeToCsvFile(firstLineFile, fileList)
-
+    """method save dataStatistic to file"""
     def writeToCsvFile(self, fileName, tList):
         name = fileName + '_algorithms.csv'
         with open(name, 'wb') as csvfile:
-            spamwriter = csv.writer(csvfile, delimiter=' ')
+            spamwriter = csv.writer(csvfile, delimiter=' ', dialect='excel', quoting=csv.QUOTE_NONE, escapechar=' ')
             for row in tList:
-                spamwriter.writerow(row)
+                print row
+            spamwriter.writerows(tList)
+################################################################################
+    """methods for statistic counter"""
+
+    """preparing dictonary for counting the best statistic data"""
+    def preapreCounterErrorDictonary(self,counterDict):
+        counterDict['MAGNETIC'] = {}
+        counterDict['RSSI'] = {}
+
+        counterDict['MAGNETIC']['LISTS'] = {}
+        counterDict['RSSI']['LISTS'] = {}
+
+        """choosing the best data statistic for locating"""
+        for map_name in self.map:
+            for dataStatistics in self.STATISTIC_NAME:
+                counterDict[map_name][dataStatistics] = 0
+                counterDict[map_name]['LISTS'][dataStatistics] = []
+
+    """choosing data statistic with the smallest error in each document """
+    def smallestErrorStatisticCounter(self, resultAlgorithmDict, counterDict):
+        for map_name in self.map:
+            for doc in resultAlgorithmDict[map_name]:
+                bestX = doc['RESULTS']['MEAN']['ERROR']['X']
+                bestY = doc['RESULTS']['MEAN']['ERROR']['Y']
+                errorSumBest = bestX + bestY
+                anwser = 'MEAN'
+                for dataStatistics in self.STATISTIC_NAME[1:]:
+                    nextX = doc['RESULTS'][dataStatistics]['ERROR']['X']
+                    nextY = doc['RESULTS'][dataStatistics]['ERROR']['Y']
+                    errorSumNext = nextX + nextY
+                    if errorSumBest > nextY:
+                        anwser = dataStatistics
+                        errorSumBest = errorSumNext
+                counterDict[map_name][anwser] += 1
+                counterDict[map_name]['LISTS'][anwser].append(doc)
+
+    def preapreLinesForCsvFileStatisticCounter(self, tList, counterDict):
+        for map_name in self.map:
+            firstLineFile = [self.collname + '_' + map_name]
+            tList.append(firstLineFile)
+            for dataStatistics in self.STATISTIC_NAME:
+                tmpRow = [dataStatistics.replace(' ',''),  str(counterDict[map_name][dataStatistics])]
+                tList.append(tmpRow)
+################################################################################
+    """defenition methods which helps counting statistics of errors"""
+
+    def prepareLinesForCsvFileStatistics(self, statisticDict, tList):
+        for map_name in self.map:
+            tList.append([map_name])
+            for dataStatistics in self.STATISTIC_NAME:
+                tList.append([dataStatistics.replace(' ','')])
+                tList.append(['ERROR'])
+                tList.append([' '])
+                tList.append(['X'])
+                tmpRow = ['MIN', str(statisticDict[map_name][dataStatistics]['ERROR']['X']['MIN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MAX', str(statisticDict[map_name][dataStatistics]['ERROR']['X']['MAX'])]
+                tList.append(tmpRow)
+                tmpRow = ['MEAN', str(statisticDict[map_name][dataStatistics]['ERROR']['X']['MEAN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MODE', str(statisticDict[map_name][dataStatistics]['ERROR']['X']['MODE'])]
+                tList.append(tmpRow)
+                tmpRow = ['STANDARD_DEVIATION', str(statisticDict[map_name][dataStatistics]['ERROR']['X']['STANDARD_DEVIATION'])]
+                tList.append(tmpRow)
+
+                tList.append([' '])
+                tList.append(['Y'])
+                tmpRow = ['MIN', str(statisticDict[map_name][dataStatistics]['ERROR']['Y']['MIN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MAX', str(statisticDict[map_name][dataStatistics]['ERROR']['Y']['MAX'])]
+                tList.append(tmpRow)
+                tmpRow = ['MEAN', str(statisticDict[map_name][dataStatistics]['ERROR']['Y']['MEAN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MODE', str(statisticDict[map_name][dataStatistics]['ERROR']['Y']['MODE'])]
+                tList.append(tmpRow)
+                tmpRow = ['STANDARD_DEVIATION', str(statisticDict[map_name][dataStatistics]['ERROR']['X']['STANDARD_DEVIATION'])]
+                tList.append(tmpRow)
+
+                tList.append([' '])
+                tList.append(['ERROR_PERCENT'])
+                tList.append([' '])
+                tList.append(['X'])
+                tmpRow = ['MIN', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['X']['MIN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MAX', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['X']['MAX'])]
+                tList.append(tmpRow)
+                tmpRow = ['MEAN', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['X']['MEAN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MODE', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['X']['MODE'])]
+                tList.append(tmpRow)
+                tmpRow = ['STANDARD_DEVIATION', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['X']['STANDARD_DEVIATION'])]
+                tList.append(tmpRow)
+
+                tList.append([' '])
+                tList.append(['Y'])
+                tmpRow = ['MIN', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['Y']['MIN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MAX', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['Y']['MAX'])]
+                tList.append(tmpRow)
+                tmpRow = ['MEAN', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['Y']['MEAN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MODE', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['Y']['MODE'])]
+                tList.append(tmpRow)
+                tmpRow = ['STANDARD_DEVIATION', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['Y']['STANDARD_DEVIATION'])]
+
+                tList.append([' '])
+                tList.append(['ERROR_COORDINATE'])
+                tList.append([' '])
+                tList.append(['X'])
+                tmpRow = ['MIN', str(statisticDict[map_name][dataStatistics]['ERROR_COORDINATE']['X']['MIN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MAX', str(statisticDict[map_name][dataStatistics]['ERROR_COORDINATE']['X']['MAX'])]
+                tList.append(tmpRow)
+                tmpRow = ['MEAN', str(statisticDict[map_name][dataStatistics]['ERROR_COORDINATE']['X']['MEAN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MODE', str(statisticDict[map_name][dataStatistics]['ERROR_COORDINATE']['X']['MODE'])]
+                tList.append(tmpRow)
+                tmpRow = ['STANDARD_DEVIATION', str(statisticDict[map_name][dataStatistics]['ERROR_COORDINATE']['X']['STANDARD_DEVIATION'])]
+                tList.append(tmpRow)
+
+                tList.append([' '])
+                tList.append(['Y'])
+                tmpRow = ['MIN', str(statisticDict[map_name][dataStatistics]['ERROR_COORDINATE']['Y']['MIN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MAX', str(statisticDict[map_name][dataStatistics]['ERROR_COORDINATE']['Y']['MAX'])]
+                tList.append(tmpRow)
+                tmpRow = ['MEAN', str(statisticDict[map_name][dataStatistics]['ERROR_COORDINATE']['Y']['MEAN'])]
+                tList.append(tmpRow)
+                tmpRow = ['MODE', str(statisticDict[map_name][dataStatistics]['ERROR_COORDINATE']['Y']['MODE'])]
+                tList.append(tmpRow)
+                tmpRow = ['STANDARD_DEVIATION', str(statisticDict[map_name][dataStatistics]['ERROR_PERCENT']['Y']['STANDARD_DEVIATION'])]
+                tList.append(tmpRow)
+
+    """method count max.min,mode, mean, standart deviation for magnetic rssi map
+       for each cooridinate and each statistics"""
+    def countErrorStatistics(self,errorStatisticDic, resultDic):
+
+        for map_name in self.map:
+            for dataStatistics in self.STATISTIC_NAME:
+                resultDic[map_name][dataStatistics] = {}
+                """ERROR"""
+                tmpDic = {}
+                data = errorStatisticDic[map_name][dataStatistics]['ERROR']['X']
+                tmpDic['MIN'] = min(data)
+                tmpDic['MAX'] = max(data)
+                tmpList = list(scipy.stats.mode(data))
+                tmpDic['MODE'] = tmpList[0].tolist()[0]
+                tmpDic['MEAN'] = np.mean(data)
+                tmpDic['STANDARD_DEVIATION'] = np.std(data)
+
+                tmp = {}
+                tmp['X'] = tmpDic
+
+                tmpDic = {}
+                data = errorStatisticDic[map_name][dataStatistics]['ERROR']['Y']
+                tmpDic['MIN'] = min(data)
+                tmpDic['MAX'] = max(data)
+                tmpList = list(scipy.stats.mode(data))
+                tmpDic['MODE'] = tmpList[0].tolist()[0]
+                tmpDic['MEAN'] = np.mean(data)
+                tmpDic['STANDARD_DEVIATION'] = np.std(data)
+
+                tmp['Y'] = tmpDic
+                resultDic[map_name][dataStatistics]['ERROR'] = tmp
+
+                """ERROR_PERCENT"""
+                tmpDic = {}
+                data = errorStatisticDic[map_name][dataStatistics]['ERROR_PERCENT']['X']
+                tmpDic['MIN'] = min(data)
+                tmpDic['MAX'] = max(data)
+                tmpList = list(scipy.stats.mode(data))
+                tmpDic['MODE'] = tmpList[0].tolist()[0]
+                tmpDic['MEAN'] = np.mean(data)
+                tmpDic['STANDARD_DEVIATION'] = np.std(data)
+
+                tmp = {}
+                tmp['X'] = tmpDic
+
+                tmpDic = {}
+                data = errorStatisticDic[map_name][dataStatistics]['ERROR_PERCENT']['Y']
+                tmpDic['MIN'] = min(data)
+                tmpDic['MAX'] = max(data)
+                tmpList = list(scipy.stats.mode(data))
+                tmpDic['MODE'] = tmpList[0].tolist()[0]
+                tmpDic['MEAN'] = np.mean(data)
+                tmpDic['STANDARD_DEVIATION'] = np.std(data)
+
+                tmp['Y'] = tmpDic
+                resultDic[map_name][dataStatistics]['ERROR_PERCENT'] = tmp
+
+                """ERROR_COORDINATE"""
+                tmpDic = {}
+                data = errorStatisticDic[map_name][dataStatistics]['ERROR_COORDINATE']['X']
+                tmpDic['MIN'] = min(data)
+                tmpDic['MAX'] = max(data)
+                tmpList = list(scipy.stats.mode(data))
+                tmpDic['MODE'] = tmpList[0].tolist()[0]
+                tmpDic['MEAN'] = np.mean(data)
+                tmpDic['STANDARD_DEVIATION'] = np.std(data)
+
+                tmp = {}
+                tmp['X'] = tmpDic
+
+                tmpDic = {}
+                data = errorStatisticDic[map_name][dataStatistics]['ERROR_COORDINATE']['Y']
+                tmpDic['MIN'] = min(data)
+                tmpDic['MAX'] = max(data)
+                tmpList = list(scipy.stats.mode(data))
+                tmpDic['MODE'] = tmpList[0].tolist()[0]
+                tmpDic['MEAN'] = np.mean(data)
+                tmpDic['STANDARD_DEVIATION'] = np.std(data)
+
+                tmp['Y'] = tmpDic
+                resultDic[map_name][dataStatistics]['ERROR_COORDINATE'] = tmp
+
+    """gain x and y error"""
+    def gainXAndYErrorStatistics(self, resultAlgorithmDict, errorDictonary):
+
+        for map_name in self.map:
+            for doc in resultAlgorithmDict[map_name]:
+                for dataStatistics in self.STATISTIC_NAME:
+                    tmpX = doc['RESULTS'][dataStatistics]['ERROR']['X']
+                    tmpY = doc['RESULTS'][dataStatistics]['ERROR']['Y']
+                    errorDictonary[map_name][dataStatistics]['ERROR']['X'].append(tmpX)
+                    errorDictonary[map_name][dataStatistics]['ERROR']['Y'].append(tmpY)
+
+                    tmpX = doc['RESULTS'][dataStatistics]['ERROR_PERCENT']['X']
+                    tmpY = doc['RESULTS'][dataStatistics]['ERROR_PERCENT']['Y']
+                    errorDictonary[map_name][dataStatistics]['ERROR_PERCENT']['X'].append(tmpX)
+                    errorDictonary[map_name][dataStatistics]['ERROR_PERCENT']['Y'].append(tmpY)
+
+                    tmpX = doc['RESULTS'][dataStatistics]['ERROR_COORDINATE']['X']
+                    tmpY = doc['RESULTS'][dataStatistics]['ERROR_COORDINATE']['Y']
+                    errorDictonary[map_name][dataStatistics]['ERROR_COORDINATE']['X'].append(tmpX)
+                    errorDictonary[map_name][dataStatistics]['ERROR_COORDINATE']['Y'].append(tmpY)
+
+    """method preapres dictonry for getting all errors"""
+    def preapreErrorDictonaryStatistics(self, errorDic):
+
+        errorDic['MAGNETIC'] = {}
+        errorDic['RSSI'] = {}
+
+        for map_name in self.map:
+
+            for dataStatistics in self.STATISTIC_NAME:
+
+                errorDic[map_name][dataStatistics] = {}
+                tmpDic = {}
+                tmpC = {}
+                tmpC['X'] = []
+                tmpC['Y'] = []
+                tmpDic['ERROR'] = tmpC
+
+                tmpC = {}
+                tmpC['X'] = []
+                tmpC['Y'] = []
+                tmpDic['ERROR_PERCENT'] = tmpC
+
+                tmpC = {}
+                tmpC['X'] = []
+                tmpC['Y'] = []
+                tmpDic['ERROR_COORDINATE'] = tmpC
+                errorDic[map_name][dataStatistics] = tmpDic
+################################################################################
+    """method which helps in analyze of statistics from error"""
+
 def main():
     if len(sys.argv) != 2:
         sys.exit('Too small arguments! You gave: %s' % len(sys.argv))
