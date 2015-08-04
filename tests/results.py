@@ -11,22 +11,37 @@ import scipy.stats
 
 class Results(object):
 
-    def __init__(self,collName):
+    def __init__(self,collName, collFingerprintName, fileName):
         self.collname = collName
+        self.collFingerprintName = collFingerprintName
+        self.fileName = fileName
+
         self.conn = MongoClient()
         self.db = self.conn['result']
+        self.db_fingerprint = self.conn['fingerprint']
         self.db_result_statistics = self.conn['result_statistics']
         self.coll = self.db[self.collname]
+        self.coll_fingerprint = self.db_fingerprint[self.collFingerprintName]
+
         self.distinctCp = self.coll.distinct('CHECKPOINT')
+        self.x_distinct = self.coll_fingerprint.distinct('X')
+        self.y_distinct = self.coll_fingerprint.distinct('Y')
+        self.x_distinct.sort()
+        self.y_distinct.sort()
         self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE", "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50", "PERCENTILE - 70",  "PERCENTILE - 90"]
         self.ERROR_STATISTICS = ['MAX','MIN', 'MEAN', 'MODE']
         self.map = ['MAGNETIC', 'RSSI']
+
+        self.checkPoints = {}
+
+        self.loadCheckPoints()
 
     def __del__(self):
         self.conn.close()
 ###############################################################################
     """methods for menu"""
 
+    """method shows localization and localizztion error"""
     def showSinglePoint(self, chooseAp, sd):
         cursor = self.coll.find({'CHECKPOINT' : chooseAp})
         docs = [res for res in cursor]
@@ -92,6 +107,40 @@ class Results(object):
             plt.xlabel('width [m]')
             plt.ylabel('height [m]')
             plt.show()
+
+    """method show checkpoint located by algorithm and chosen points"""
+    def showLocatedCheckpointAndPoints(self):
+        while(True):
+            anws = raw_input('quit(q)?')
+            if anws == 'q':
+                break
+            checkpoint = raw_input('%s\nchoose checkpoint(0-%s): ' % (str(self.distinctCp),(len(self.distinctCp) - 1)))
+            chosenStatistic = int(raw_input('%s\nchoose data statistic(0-%s): ' %(str(self.STATISTIC_NAME),(len(self.STATISTIC_NAME) - 1))))
+            chosenStatistic = self.STATISTIC_NAME[chosenStatistic]
+            anws = raw_input('magnetic(0) or rssi (1) or quit(q)')
+            if anws == 'q':
+                break
+            cursor = None
+            if anws == '0':
+                cursor = self.coll.find({'CHECKPOINT': checkpoint, 'FINGERPRINT_MAP': 'MAGNETIC'})
+            elif anws == '1':
+                cursor = self.coll.find({'CHECKPOINT': checkpoint, 'FINGERPRINT_MAP': 'RSSI'})
+
+            tmp = [res for res in cursor]
+            doc = tmp[0]
+            resultDict = doc['RESULTS'][chosenStatistic]
+            chosenPoints = doc['CHOSEN_POINTS'][chosenStatistic]
+
+            xList = []
+            yList = []
+
+            for item in chosenPoints:
+                xList.append(item['X_FINGERPRINT'])
+                yList.append(item['Y_FINGERPRINT'])
+            xList.append(resultDict['X'])
+            yList.append(resultDict['Y'])
+
+            self.showCheckpointOnMap(xList,yList,checkpoint, anws)
 
     def countAlgorithmStatisticsError(self):
 
@@ -327,9 +376,54 @@ class Results(object):
             spamwriter = csv.writer(csvfile, delimiter=' ', dialect='excel', quoting=csv.QUOTE_NONE, escapechar=' ')
             spamwriter.writerows(tList)
 ################################################################################
-    """methods for showing data statistic with the smallest errors"""
-    def preapreSmallestErrorDictonary(self, bestDict):
-        pass
+    """methods for showing chosen points with located checkpoint"""
+    """method draws choosen ponts on map """
+
+    def showCheckpointOnMap(self,xList, yList,checkpoint ,choose):
+        tmpX = xList
+        tmpY = yList
+        colourList = [0] * len(tmpX)
+        colourList[-1] = 1000
+        colourList.append(100)
+        tmpX.append(float(self.checkPoints[checkpoint]['X']))
+        tmpY.append(float(self.checkPoints[checkpoint]['Y']))
+        print tmpX
+        print tmpY
+        print colourList
+        plt.scatter(tmpX, tmpY,c=colourList)
+        plt.xlim(0,max(self.x_distinct))
+        plt.ylim(0,max(self.y_distinct))
+        for i in range(len(tmpX) - 2):
+            tmplist = [tmpX[i],tmpY[i]]
+            tmpTuple = tuple(tmplist)
+            plt.annotate('CHOSEN_POINT',xy=tmpTuple)
+        tmplist = [tmpX[-1],tmpY[-1]]
+        tmpTuple = tuple(tmplist)
+        plt.annotate('REAL_POSITION',xy=tmpTuple)
+        tmplist = [tmpX[-2],tmpY[-2]]
+        tmpTuple = tuple(tmplist)
+        plt.annotate('LOCALIZATION_POSITION',xy=tmpTuple)
+        if choose == '0':
+            plt.title('MAGNETIC - CHECKPOINT ' + checkpoint)
+        elif choose == '1':
+            plt.title('RSSI - CHECKPOINT ' + checkpoint)
+        plt.xlabel('width [m]')
+        plt.ylabel('height [m]')
+        plt.show()
+
+    '''reading checkpoints coordinates from text file '''
+    def loadCheckPoints(self):
+        with open(self.fileName,'r') as fd:
+            lines = fd.readlines()
+
+        for line in lines:
+            line = line.replace('\n','')
+            tmp = line.split(' ')
+            tmpDict = {}
+            tmpDict['X'] = tmp[1]
+            tmpDict['Y'] = tmp[2]
+            self.checkPoints[tmp[0]] = tmpDict
+        print 'All checkpoints coordinates loaded'
 ################################################################################
     """methods for statistics counter - seprate cooridinates"""
 
@@ -669,16 +763,17 @@ class Results(object):
     """method which helps in analyze of statistics from error"""
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 4:
         sys.exit('Too small arguments! You gave: %s' % len(sys.argv))
-    results = Results(sys.argv[1])
+    results = Results(sys.argv[1],sys.argv[2],sys.argv[3])
     msg = '''
     q - exit
     0 - show single checkpoint
     1 - show checkpoints localization error for certain data statistic
     2 - count data statistic error
     3 - show the smallest error per coordinate
-    4 - show error od x and y for certain data statistics'''
+    4 - show error od x and y for certain data statistics
+    5 - show chosen points, acctual position of checkpoint and localization'''
     while(True):
         time.sleep(1)
         print msg
@@ -697,6 +792,8 @@ def main():
             results.showTheSmallestErrorForCoordinates()
         elif anw == '4':
             results.showErrorForCoordinatesFoStatistics()
+        elif anw == '5':
+            results.showLocatedCheckpointAndPoints()
 
 
 if __name__ == '__main__':
