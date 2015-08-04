@@ -32,6 +32,7 @@ class Algorithms (object):
         "PERCENTILE - 70",  "PERCENTILE - 90"]
         self.ALGORITHM_DISTANCE_NAME = ['STATISTICS', 'PROBABILITY']
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_']
+        self.STANDARD_DEVIATION_RSSI = 6
 
         self.x_distinct = None
         self.y_distinct = None
@@ -43,9 +44,11 @@ class Algorithms (object):
 
         dbFingerprint = self.conn['fingerprint']
         dbLocate = self.conn['locate']
+        dbTime = self.conn['time_algorithm_result']
         self.dbResult = self.conn['result']
         self.collFingerprint = dbFingerprint[self.collName]
         self.collLocate = dbLocate[self.collNameLocate]
+        self.collTime = dbTime['algorithms_time']
 
         '''data for all algorithms'''
         self.ipPhone = ''
@@ -57,6 +60,11 @@ class Algorithms (object):
         self.sumDiff = {}
         self.sumDiffMac = {}
         self.allDiff = {}
+
+        """data  for measuring time lasts algorithm"""
+        self.startTime = None
+        self.stopTime = None
+        self.timeCheckpointList = []
 
         self.loadCheckPoints()
         self.distinctCoordinates()
@@ -307,6 +315,7 @@ class Algorithms (object):
 
     ''' method preapres class for countings for next checkpoint'''
     def beforeLocate(self,checkpoint):
+        self.resetTimeVariables()
         self.currentCheckpoint = str(checkpoint)
         self.prepareCheckpointStatistic()
         self.preapreSumDiffMac()
@@ -534,7 +543,7 @@ class Algorithms (object):
                     statisticsLocate = docLocate['STATISTICS']
                     statisticsFingerprint = docFingerprint['STATISTICS']
                     for dataStatistic in self.STATISTIC_NAME:
-                        tmpDiff = scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION'])
+                        tmpDiff = scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],self.STANDARD_DEVIATION_RSSI)
                         diff[dataStatistic] = tmpDiff
                     self.allDiff['RSSI'].append(diff)
 
@@ -742,6 +751,41 @@ class Algorithms (object):
             for record in self.allDiff['MAGNETIC']:
                 print record
                 raw_input()
+###############################################################################
+    """method for counting avrage time for locating checkpoint"""
+
+    def resetTimeVariables(self):
+        self.startTime = 0
+        self.stopTime = 0
+
+    def startTime(self):
+        self.startTime = time.time()
+
+    def stopTime(self):
+        self.stopTime = time.time()
+        diff = self.startTime - self.stopTime
+
+        self.timeCheckpointList.append(diff)
+
+    def saveTime(self):
+        cursor = self.collTime({})
+        tmp = [res for res in cursor]
+
+        cTime = 0
+        for tmpTime in self.timeCheckpointList:
+            cTime += tmpTime
+        cTime /= float(len(self.timeCheckpointList))
+
+        if len(tmp) == 0:
+            tmpDict = {}
+            tmpDict[self.collName] = cTime
+            self.collTime.save(tmpDict)
+        elif len(tmp) == 1:
+            doc = tmp[0]
+            doc[self.collName] = cTime
+            self.collTime.save(doc)
+
+
 ################################################################################
     '''starts locating device on RSSI and magnetic map
        with defined algorithm in constructor'''
@@ -750,10 +794,15 @@ class Algorithms (object):
             print 'BEFORE LOCATING CHECKPOINT - ' + checkpoint
             self.beforeLocate(checkpoint)
             if self.mode == 'DEPLOY':
+                self.startTime()
+
                 self.countDifference()
                 self.countSumStatisticalDiffrence()
                 self.choosePointsOnMap()
                 self.countLocationAndError()
+
+                self.stopTime()
+                self.saveTime()
             elif self.mode == 'DEBUG':
                 anws = raw_input('DEBUG - after before locate smth(y/n/q)?')
                 if anws == 'y':
