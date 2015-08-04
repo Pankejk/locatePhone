@@ -15,10 +15,18 @@ class Results(object):
         self.collname = collName
         self.conn = MongoClient()
         self.db = self.conn['result']
+        self.db_result_statistics = self.conn['result_statistics']
         self.coll = self.db[self.collname]
         self.distinctCp = self.coll.distinct('CHECKPOINT')
         self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE", "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50", "PERCENTILE - 70",  "PERCENTILE - 90"]
+        self.ERROR_STATISTICS = ['MAX','MIN', 'MEAN', 'MODE']
         self.map = ['MAGNETIC', 'RSSI']
+
+    def __del__(self):
+        self.conn.close()
+###############################################################################
+    """methods for menu"""
+
     def showSinglePoint(self, chooseAp, sd):
         cursor = self.coll.find({'CHECKPOINT' : chooseAp})
         docs = [res for res in cursor]
@@ -88,8 +96,154 @@ class Results(object):
     def countAlgorithmStatisticsError(self):
 
         self.countWhenSumErrorTheSmallest()
+        self.countWhenCoordinatesErrorTheSmallest()
         self.countDataStatisticsError()
 
+    def showTheSmallestErrorForCoordinates(self):
+
+        cursor = self.db_result_statistics[self.collname].find({'DOCUMENT_TYPE': 'COUNTER_STATISTICS_COORDINATES'})
+        tmp = [res for res in cursor]
+        statisticCounterDoc = tmp[0]
+
+        bestStatistic = {}
+        bestStatistic['RSSI'] = {}
+        bestStatistic['MAGNETIC'] = {}
+
+        for map_name in self.map:
+            tmpDic = {}
+            tmpDic['VALUE'] = 0
+            tmpDic['DATA_STATISTICS'] = ''
+            bestStatistic[map_name]['X'] = tmpDic
+            tmpDic = {}
+            tmpDic['VALUE'] = 0
+            tmpDic['DATA_STATISTICS'] = ''
+            bestStatistic[map_name]['Y'] = tmpDic
+            bestStatistic[map_name]['X']['DATA_STATISTICS'] = 'MAX'
+            bestStatistic[map_name]['X']['VALUE'] = statisticCounterDoc[map_name]['X']['MAX']
+            bestStatistic[map_name]['Y']['DATA_STATISTICS'] = 'MAX'
+            bestStatistic[map_name]['Y']['VALUE'] = statisticCounterDoc[map_name]['Y']['MAX']
+
+        for map_name in self.map:
+            for dataStatistic in self.ERROR_STATISTICS[1:]:
+                if bestStatistic[map_name]['X']['VALUE'] < statisticCounterDoc[map_name]['X'][dataStatistic]:
+                    bestStatistic[map_name]['X']['VALUE'] = statisticCounterDoc[map_name]['X'][dataStatistic]
+                    bestStatistic[map_name]['X']['DATA_STATISTICS'] = dataStatistic
+
+                if bestStatistic[map_name]['Y']['VALUE'] < statisticCounterDoc[map_name]['Y'][dataStatistic]:
+                    bestStatistic[map_name]['Y']['VALUE'] = statisticCounterDoc[map_name]['Y'][dataStatistic]
+                    bestStatistic[map_name]['Y']['DATA_STATISTICS'] = dataStatistic
+
+        cursor = self.db_result_statistics[self.collname].find({'DOCUMENT_TYPE': 'ERROR_STATISTICS'})
+        tmp = [res for res in cursor]
+        statisticsErrorDoc = tmp[0]
+
+        statisticsMagneticX = bestStatistic['MAGNETIC']['X']['DATA_STATISTICS']
+        statisticsMagneticY = bestStatistic['MAGNETIC']['Y']['DATA_STATISTICS']
+        statisticsRssiX = bestStatistic['RSSI']['X']['DATA_STATISTICS']
+        statisticsRssiY = bestStatistic['RSSI']['Y']['DATA_STATISTICS']
+        statisticsErrorDoc['MAGNETIC'][statisticsMagneticX]
+        statisticsErrorDoc['MAGNETIC'][statisticsMagneticY]
+        statisticsErrorDoc['RSSI'][statisticsRssiX]
+        statisticsErrorDoc['RSSI'][statisticsRssiY]
+
+        tDic = {}
+        tmpDic = {}
+        tmpDic['X'] = statisticsErrorDoc['MAGNETIC'][statisticsMagneticX]
+        tmpDic['Y'] = statisticsErrorDoc['MAGNETIC'][statisticsMagneticY]
+        tDic['MAGNETIC'] = tmpDic
+        tmpDic = {}
+        tmpDic['X'] = statisticsErrorDoc['RSSI'][statisticsRssiX]
+        tmpDic['Y'] = statisticsErrorDoc['RSSI'][statisticsRssiY]
+        tDic['RSSI'] = tmpDic
+
+        anwserDic = {}
+        tmpDic = {}
+        tmpDic['X'] = {}
+        tmpDic['Y'] = {}
+        anwserDic['MAGNETIC'] = tmpDic
+        tmpDic = {}
+        tmpDic['X'] = {}
+        tmpDic['Y'] = {}
+        anwserDic['RSSI'] = tmpDic
+
+        for map_name in self.map:
+            errorX = tDic[map_name]['X']['ERROR']['X']
+            errorY = tDic[map_name]['Y']['ERROR']['Y']
+            errorPercentX = tDic[map_name]['X']['ERROR_PERCENT']['X']
+            errorPercentY = tDic[map_name]['Y']['ERROR_PERCENT']['Y']
+            errorCoordinateX = tDic[map_name]['X']['ERROR_COORDINATE']['X']
+            errorCoordinateY = tDic[map_name]['Y']['ERROR_COORDINATE']['Y']
+
+            tmpErrorDicX = {}
+            tmpErrorDicY = {}
+
+            tmpErrorDicX['ERROR'] = errorX
+            tmpErrorDicX['ERROR_PERCENT'] = errorPercentX
+            tmpErrorDicX['ERROR_COORDINATE'] = errorCoordinateX
+
+            tmpErrorDicY['ERROR'] = errorY
+            tmpErrorDicY['ERROR_PERCENT'] = errorPercentY
+            tmpErrorDicY['ERROR_COORDINATE'] = errorCoordinateY
+
+            anwserDic[map_name]['X'] = tmpErrorDicX
+            anwserDic[map_name]['Y'] = tmpErrorDicY
+
+        for map_name in self.map:
+            print map_name
+            if map_name == 'MAGNETIC':
+                print 'STATISTIC DATA X: ' + statisticsMagneticX
+                print anwserDic[map_name]['X']
+                print 'STATISTIC DATA Y: ' + statisticsMagneticY
+                print anwserDic[map_name]['Y']
+            elif map_name == 'RSSI':
+                print 'STATISTIC DATA X: ' + statisticsRssiX
+                print anwserDic[map_name]['X']
+                print 'STATISTIC DATA Y: ' + statisticsRssiY
+                print anwserDic[map_name]['Y']
+
+    def showErrorForCoordinatesFoStatistics(self):
+        cursor = self.db_result_statistics[self.collname].find({'DOCUMENT_TYPE': 'ERROR_STATISTICS'})
+        tmp = [res for res in cursor]
+        statisticsErrorDoc = tmp[0]
+
+        anws  = int(raw_input('%s\n Choose data statistic(0-%s)' % (str(self.STATISTIC_NAME), (len(self.STATISTIC_NAME) - 1))))
+
+        errorDataMagnetic = statisticsErrorDoc['MAGNETIC'][self.STATISTIC_NAME[anws]]
+        errorDataRssi = statisticsErrorDoc['RSSI'][self.STATISTIC_NAME[anws]]
+
+        print self.STATISTIC_NAME[anws]
+        print 'MAGNETIC'
+        print 'X - ERROR'
+        print errorDataMagnetic['ERROR']['X']
+        print 'Y - ERROR'
+        print errorDataMagnetic['ERROR']['Y']
+
+        print 'X - ERROR_PERCENT'
+        print errorDataMagnetic['ERROR_PERCENT']['X']
+        print 'Y - ERROR_PERCENT'
+        print errorDataMagnetic['ERROR_PERCENT']['Y']
+
+        print 'X - ERROR_STATISTICS'
+        print errorDataMagnetic['ERROR_COORDINATE']['X']
+        print 'Y - ERROR_STATISTICS'
+        print errorDataMagnetic['ERROR_COORDINATE']['Y']
+
+        print 'RSSI'
+        print 'X - ERROR'
+        print errorDataRssi['ERROR']['X']
+        print 'Y - ERROR'
+        print errorDataRssi['ERROR']['Y']
+
+        print 'X - ERROR_PERCENT'
+        print errorDataRssi['ERROR_PERCENT']['X']
+        print 'Y - ERROR_PERCENT'
+        print errorDataRssi['ERROR_PERCENT']['Y']
+
+        print 'X - ERROR_COORDINATE'
+        print errorDataRssi['ERROR_COORDINATE']['X']
+        print 'Y - ERROR_STATISTICS'
+        print errorDataRssi['ERROR_COORDINATE']['Y']
+###############################################################################
     """method counts max. min. mode, mean of error per data statisitcs"""
     def countDataStatisticsError(self):
 
@@ -109,13 +263,15 @@ class Results(object):
         fileList = []
         self.prepareLinesForCsvFileStatistics(resultStatistic, fileList)
 
+        resultStatistic['DOCUMENT_TYPE'] = 'ERROR_STATISTICS'
         date = str(datetime.now()).replace(' ','_')
         date = date.replace(':','-')
         fileName = self.collname + '_DATA_STATISTICS_' + date
         self.writeToCsvFile(fileName, fileList)
+        self.db_result_statistics[self.collname].insert(resultStatistic)
 
     """method search all checkpoints and shows the best data statistic for
-       localization - counting per document"""
+       localization. summing error of x and y - counting per document"""
     def countWhenSumErrorTheSmallest(self):
         resultAlgorithmDocs = {}
         self.loadDataResult(resultAlgorithmDocs)
@@ -127,14 +283,32 @@ class Results(object):
 
         fileList = []
         self.preapreLinesForCsvFileStatisticCounter(fileList, commonStatistics)
-        for line in fileList:
-            print line
-            raw_input()
+
         date = str(datetime.now()).replace(' ','_')
         date = date.replace(':','-')
         firstLineFile = self.collname + '_DATA_STATISTICS_BEST_' + date
         self.writeToCsvFile(firstLineFile, fileList)
+        self.db_result_statistics[self.collname].insert(commonStatistics)
 
+    """method search all checkpoints and shows the best data statistic for
+       localization - counting per document"""
+    def countWhenCoordinatesErrorTheSmallest(self):
+        resultAlgorithmDocs = {}
+        self.loadDataResult(resultAlgorithmDocs)
+
+        commonStatistics = {}
+        self.preapreCounterErrorCoordinatesDictonary(commonStatistics)
+
+        self.smallestErrorStatisticCoordinatesCounter(resultAlgorithmDocs, commonStatistics)
+
+        fileList = []
+        self.preapreLinesForCsvFileStatisticCounterCoordinates(fileList, commonStatistics)
+
+        date = str(datetime.now()).replace(' ','_')
+        date = date.replace(':','-')
+        firstLineFile = self.collname + '_DATA_STATISTICS_COORDINATES_BEST_' + date
+        self.writeToCsvFile(firstLineFile, fileList)
+        self.db_result_statistics[self.collname].insert(commonStatistics)
 ################################################################################
     """method loads data from result databse to count statistics"""
     def loadDataResult(self, docDict):
@@ -146,20 +320,94 @@ class Results(object):
         cursor = self.coll.find({'FINGERPRINT_MAP': 'MAGNETIC'})
         docDict['MAGNETIC'] = [res for res in cursor]
 
-
     """method save dataStatistic to file"""
     def writeToCsvFile(self, fileName, tList):
         name = fileName + '_algorithms.csv'
         with open(name, 'wb') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=' ', dialect='excel', quoting=csv.QUOTE_NONE, escapechar=' ')
-            for row in tList:
-                print row
             spamwriter.writerows(tList)
 ################################################################################
-    """methods for statistic counter"""
+    """methods for showing data statistic with the smallest errors"""
+    def preapreSmallestErrorDictonary(self, bestDict):
+        pass
+################################################################################
+    """methods for statistics counter - seprate cooridinates"""
+
+    """method prepares dictoney for counting when data statistic has the smallest error
+       coordinates separetly"""
+    def preapreCounterErrorCoordinatesDictonary(self, counterDict):
+        counterDict['DOCUMENT_TYPE'] = 'COUNTER_STATISTICS_COORDINATES'
+        tmpDic = {}
+        tmpDic['X'] = {}
+        tmpDic['Y'] = {}
+        counterDict['MAGNETIC'] = tmpDic
+        tmpDic = {}
+        tmpDic['X'] = {}
+        tmpDic['Y'] = {}
+        counterDict['RSSI'] = tmpDic
+
+        tmpDic = {}
+        tmpDic['X'] = {}
+        tmpDic['Y'] = {}
+        counterDict['MAGNETIC']['LISTS'] = tmpDic
+        tmpDic = {}
+        tmpDic['X'] = {}
+        tmpDic['Y'] = {}
+        counterDict['RSSI']['LISTS'] = tmpDic
+
+        """choosing the best data statistic for locating"""
+        for map_name in self.map:
+            for dataStatistics in self.STATISTIC_NAME:
+                counterDict[map_name]['X'][dataStatistics] = 0
+                counterDict[map_name]['Y'][dataStatistics] = 0
+                counterDict[map_name]['LISTS']['X'][dataStatistics] = []
+                counterDict[map_name]['LISTS']['Y'][dataStatistics] = []
+
+    """method counts how many each data statistc is the best in localization
+       per coordinate"""
+    def smallestErrorStatisticCoordinatesCounter(self, resultAlgorithmDict, counterDict):
+        for map_name in self.map:
+            for doc in resultAlgorithmDict[map_name]:
+                bestX = doc['RESULTS']['MEAN']['ERROR']['X']
+                bestY = doc['RESULTS']['MEAN']['ERROR']['Y']
+                anwserX = 'MEAN'
+                anwserY = 'MEAN'
+
+                for dataStatistics in self.STATISTIC_NAME[1:]:
+                    nextX = doc['RESULTS'][dataStatistics]['ERROR']['X']
+                    nextY = doc['RESULTS'][dataStatistics]['ERROR']['Y']
+                    if bestY > nextY:
+                        anwserY = dataStatistics
+                        bestY = nextY
+                    if bestX > nextX:
+                        anwserX = dataStatistics
+                        bestX = nextX
+                counterDict[map_name]['X'][anwserX] += 1
+                counterDict[map_name]['LISTS']['X'][anwserX].append(doc)
+                counterDict[map_name]['Y'][anwserY] += 1
+                counterDict[map_name]['LISTS']['Y'][anwserY].append(doc)
+
+    """methods preapres lines to save statistc counter to csv file"""
+    def preapreLinesForCsvFileStatisticCounterCoordinates(self, tList, counterDict):
+        for map_name in self.map:
+            firstLineFile = [self.collname + '_' + map_name]
+            tList.append(firstLineFile)
+            for dataStatistics in self.STATISTIC_NAME:
+                tmpRow = [dataStatistics.replace(' ','')]
+                tList.append(tmpRow)
+                tmpRow = [' ']
+                tList.append(tmpRow)
+                tmpRow = ['X',  str(counterDict[map_name]['X'][dataStatistics])]
+                tList.append(tmpRow)
+                tmpRow = ['Y',  str(counterDict[map_name]['Y'][dataStatistics])]
+                tList.append(tmpRow)
+
+################################################################################
+    """methods for statistic counter - summing error of x nad y"""
 
     """preparing dictonary for counting the best statistic data"""
     def preapreCounterErrorDictonary(self,counterDict):
+        counterDict['DOCUMENT_TYPE'] = 'COUNTER_STATISTICS'
         counterDict['MAGNETIC'] = {}
         counterDict['RSSI'] = {}
 
@@ -184,7 +432,7 @@ class Results(object):
                     nextX = doc['RESULTS'][dataStatistics]['ERROR']['X']
                     nextY = doc['RESULTS'][dataStatistics]['ERROR']['Y']
                     errorSumNext = nextX + nextY
-                    if errorSumBest > nextY:
+                    if errorSumBest > errorSumNext:
                         anwser = dataStatistics
                         errorSumBest = errorSumNext
                 counterDict[map_name][anwser] += 1
@@ -392,7 +640,7 @@ class Results(object):
 
     """method preapres dictonry for getting all errors"""
     def preapreErrorDictonaryStatistics(self, errorDic):
-
+        errorDic['DOCUMENT_TYPE'] = 'ERROR_STATISTICS'
         errorDic['MAGNETIC'] = {}
         errorDic['RSSI'] = {}
 
@@ -428,7 +676,9 @@ def main():
     q - exit
     0 - show single checkpoint
     1 - show checkpoints localization error for certain data statistic
-    2 - count data statistic error'''
+    2 - count data statistic error
+    3 - show the smallest error per coordinate
+    4 - show error od x and y for certain data statistics'''
     while(True):
         time.sleep(1)
         print msg
@@ -443,6 +693,10 @@ def main():
             results.showLocationErrorAllPoints()
         elif anw == '2':
             results.countAlgorithmStatisticsError()
+        elif anw == '3':
+            results.showTheSmallestErrorForCoordinates()
+        elif anw == '4':
+            results.showErrorForCoordinatesFoStatistics()
 
 
 if __name__ == '__main__':
