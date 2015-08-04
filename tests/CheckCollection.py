@@ -25,7 +25,10 @@ class CheckCollection(object):
             if anw == 'q':
                 break
             anw = anw.split(' ')
-            cursor = coll.find({anw[0]: anw[1]})
+            queryDic = {}
+            for i in range(0,len(anw),2):
+                queryDic[anw[i]] = anw[i+1]
+            cursor = coll.find(queryDic)
             docs = [res for res in cursor]
             for doc in docs:
                 print doc
