@@ -591,7 +591,9 @@ class Algorithms (object):
             1 - show checkpoint on magnetic field map
             2 - show list of diffrence
             3 - show list of sum diffrence
-            4 - show list of sum diffence for certain mac''')
+            4 - show list of sum diffence for certain mac
+            5 - show sumDiff - line by line
+            6 - show allDiff - line by line''')
             if anws == 'q':
                 break
             elif anws == '0':
@@ -606,6 +608,10 @@ class Algorithms (object):
             elif anws == '4':
                 anws = int(raw_input('%s\nChoose mac(0-%s): ' % (str(self.mac_fingerprint_distinct), len(self.mac_fingerprint_distinct))))
                 self.showSumDiffMac(anws)
+            elif anws == '5':
+                self.showSumDiff()
+            elif anws == '6':
+                self.showAllDiff()
 
     """method chooses best points in map accordingly to AP and draw it on graph"""
     def showCheckpointOnMapAp(self,macChoice):
@@ -651,9 +657,9 @@ class Algorithms (object):
         tmpY = yList
         colourList = [0] * len(tmpX)
         colourList.append(100)
-        tmpX.append(int(self.checkPoints[self.currentCheckpoint]['X']))
-        tmpY.append(int(self.checkPoints[self.currentCheckpoint]['Y']))
-        plt.scatter(xList, yList,c=colourList)
+        tmpX.append(float(self.checkPoints[self.currentCheckpoint]['X']))
+        tmpY.append(float(self.checkPoints[self.currentCheckpoint]['Y']))
+        plt.scatter(tmpX, tmpY,c=colourList)
         plt.xlim(0,max(self.x_distinct))
         plt.ylim(0,max(self.y_distinct))
         plt.show()
@@ -661,7 +667,6 @@ class Algorithms (object):
     """ method slows down work of loop"""
     def slowDownLoop(self):
         time.sleep(0.5)
-
 
 ###############################################################################
     """ method shows diff table for magnetic or certain AP """
@@ -713,6 +718,30 @@ class Algorithms (object):
         for record in self.sumDiffMac['RSSI']:
             if record['MAC_AP'] == self.mac_fingerprint_distinct[mac]:
                 print record
+
+    """method shows sumDiff to check content - line by line"""
+    def showSumDiff(self):
+        anws = raw_input('Do you want to see magnetic(0) or RSSI(1)')
+        if anws == '1':
+            for record in self.sumDiff['RSSI']:
+                print record
+                raw_input()
+        elif anws == '0':
+            for record in self.sumDiff['MAGNETIC']:
+                print record
+                raw_input()
+
+    """method shows allDiff list - line by line"""
+    def showAllDiff(self):
+        anws = raw_input('Do you want to see magnetic(0) or RSSI(1)')
+        if anws == '1':
+            for record in self.allDiff['RSSI']:
+                print record
+                raw_input()
+        elif anws == '0':
+            for record in self.allDiff['MAGNETIC']:
+                print record
+                raw_input()
 ################################################################################
     '''starts locating device on RSSI and magnetic map
        with defined algorithm in constructor'''
