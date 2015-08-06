@@ -33,6 +33,7 @@ class Algorithms (object):
         self.ALGORITHM_DISTANCE_NAME = ['STATISTICS', 'PROBABILITY']
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_']
         self.STANDARD_DEVIATION_RSSI = 6
+        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance]
 
         self.x_distinct = None
         self.y_distinct = None
@@ -80,8 +81,7 @@ class Algorithms (object):
 
     '''method inserts result doc for a proper collection '''
     def insertResult(self,doc):
-        name = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance]
-        self.dbResult[name].insert(doc)
+        self.dbResult[self.COLL_RESULT_NAME].insert(doc)
 
 ###############################################################################
     ''' PREPARING CLASS FOR LOCATING BY ANY ALGORITHM'''
@@ -578,8 +578,8 @@ class Algorithms (object):
                     statisticsFingerprint = docFingerprint['STATISTICS']
                     for dataStatistic in self.STATISTIC_NAME:
                         tmpDiff = scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],self.STANDARD_DEVIATION_RSSI)
-                        print tmpDiff
-                        raw_input()
+                        #print tmpDiff
+                        #raw_input()
                         diff[dataStatistic] = tmpDiff
                     self.allDiff['RSSI'].append(diff)
 
@@ -596,8 +596,8 @@ class Algorithms (object):
                 statisticsFingerprint = docFingerprint['STATISTICS_NORM']
                 for dataStatistic in self.STATISTIC_NAME:
                     tmpDiff = scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION'])
-                    print tmpDiff
-                    raw_input()
+                    #print tmpDiff
+                    #raw_input()
                     diff[dataStatistic] = tmpDiff
                 self.allDiff['MAGNETIC'].append(diff)
 
@@ -874,7 +874,7 @@ class Algorithms (object):
 
     def stopCountingTime(self):
         self.stopTime = time.time()
-        diff = self.startTime - self.stopTime
+        diff = self.stopTime - self.startTime
 
         self.timeCheckpointList.append(diff)
 
@@ -889,11 +889,11 @@ class Algorithms (object):
 
         if len(tmp) == 0:
             tmpDict = {}
-            tmpDict[self.collName] = cTime
+            tmpDict[self.COLL_RESULT_NAME] = cTime
             self.collTime.save(tmpDict)
         elif len(tmp) == 1:
             doc = tmp[0]
-            doc[self.collName] = cTime
+            doc[self.COLL_RESULT_NAME] = cTime
             self.collTime.save(doc)
 
 ################################################################################
@@ -912,7 +912,6 @@ class Algorithms (object):
                 self.countLocationAndError()
 
                 self.stopCountingTime()
-                self.saveTime()
             elif self.mode == 'DEBUG':
                 anws = raw_input('DEBUG - after before locate smth(y/n/q)?')
                 if anws == 'y':
@@ -944,6 +943,7 @@ class Algorithms (object):
                 elif anws == 'q':
                     break
             print 'AFTER LOCATING CHECKPOINT - ' + checkpoint
+        self.saveTime()
 
 
 def main():
