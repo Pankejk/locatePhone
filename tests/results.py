@@ -53,6 +53,7 @@ class Results(object):
                 print 'MAGNETIC_MAP'
                 print doc['RESULTS'][self.STATISTIC_NAME[sd]]
 
+    """method shows localization of checkpoint and error on chart"""
     def showLocationErrorAllPoints(self):
         while(True):
             choose = raw_input('Magnetic map(0) or RSSI map(1) or quit(q)?')
@@ -76,6 +77,8 @@ class Results(object):
                         drawDict['X_ERROR'].append(tmpDic['ERROR']['X'])
                         drawDict['Y_ERROR'].append(tmpDic['ERROR']['Y'])
                         drawDict['NAME'].append(checkpoint)
+                print drawDict['X']
+                print drawDict['Y']
             elif choose == '1':
                 for checkpoint in self.distinctCp[start:stop]:
                     cursor = self.coll.find({'CHECKPOINT' : checkpoint, 'FINGERPRINT_MAP': 'RSSI'})
@@ -87,8 +90,10 @@ class Results(object):
                         drawDict['X_ERROR'].append(tmpDic['ERROR']['X'])
                         drawDict['Y_ERROR'].append(tmpDic['ERROR']['Y'])
                         drawDict['NAME'].append(checkpoint)
+                print drawDict['X']
+                print drawDict['Y']
             fig, ax = plt.subplots()
-            anws = raw_input('Do you want errors on: only x(0), only y (1), z and y (2)')
+            anws = raw_input('Do you want errors on: only x(0), only y (1), x and y (2)')
             if anws == '0':
                 ax.errorbar(drawDict['X'], drawDict['Y'], xerr=drawDict['X_ERROR'], fmt='o')
             elif anws == '1':
@@ -100,10 +105,12 @@ class Results(object):
                 tmplist = [drawDict['X'][i],drawDict['Y'][i]]
                 tmpTuple = tuple(tmplist)
                 plt.annotate(drawDict['NAME'][i],xy=tmpTuple)
-            if choose == '0':
+            if choose == '1':
                 plt.title('RSSI')
-            elif choose == '1':
+            elif choose == '0':
                 plt.title('MAGNETIC')
+            plt.xlim(0,max(self.x_distinct))
+            plt.ylim(0,max(self.y_distinct))
             plt.xlabel('width [m]')
             plt.ylabel('height [m]')
             plt.show()
@@ -142,12 +149,14 @@ class Results(object):
 
             self.showCheckpointOnMap(xList,yList,checkpoint, anws)
 
+    """method counts statistic of errors and effectiveness of use data statistic"""
     def countAlgorithmStatisticsError(self):
 
         self.countWhenSumErrorTheSmallest()
         self.countWhenCoordinatesErrorTheSmallest()
         self.countDataStatisticsError()
 
+    """method shows the best data statistc for localization"""
     def showTheSmallestErrorForCoordinates(self):
 
         cursor = self.db_result_statistics[self.collname].find({'DOCUMENT_TYPE': 'COUNTER_STATISTICS_COORDINATES'})
@@ -250,6 +259,7 @@ class Results(object):
                 print 'STATISTIC DATA Y: ' + statisticsRssiY
                 print anwserDic[map_name]['Y']
 
+    """method for certain data statistc shows error for x and y separetly"""
     def showErrorForCoordinatesFoStatistics(self):
         cursor = self.db_result_statistics[self.collname].find({'DOCUMENT_TYPE': 'ERROR_STATISTICS'})
         tmp = [res for res in cursor]
@@ -292,6 +302,140 @@ class Results(object):
         print errorDataRssi['ERROR_COORDINATE']['X']
         print 'Y - ERROR_STATISTICS'
         print errorDataRssi['ERROR_COORDINATE']['Y']
+
+    """method shows number of checkpoints which has x error and y error lower
+       then given at start"""
+    def showNumberOfCheckPointsBeloweError(self):
+        while(True):
+            anws = raw_input('quit(q)\nWhat error do you want to check?(x y): ')
+            if anws == 'q':
+                break
+            anws = anws.split(' ')
+            givenError = {}
+            givenError['X'] = anws[0]
+            givenError['Y'] = anws[1]
+            anwserDict = self.countNumberOfCheckPointForGivenError(givenError)
+            while(True):
+                anws = int(raw_input('quit(100)\n%s\nchoose statistic data(0-%s)' % (str(self.STATISTIC_NAME), (len(self.STATISTIC_NAME) - 1))))
+                if anws == 100:
+                    break
+                for map_name in self.map:
+                    print map_name
+                    print
+                    print 'X'
+                    print anwserDict[map_name][self.STATISTIC_NAME[anws]]['X']['VALUE']
+                    print anwserDict[map_name][self.STATISTIC_NAME[anws]]['X']['PERCENT']
+                    print 'checkpoints'
+                    tString = ''
+                    for doc in anwserDict[map_name][self.STATISTIC_NAME[anws]]['X']['CHECKPOINT_LIST']:
+                        tString += doc['CHECKPOINT'] + ','
+                    print tString
+                    print
+
+                    print 'Y'
+                    print anwserDict[map_name][self.STATISTIC_NAME[anws]]['Y']['VALUE']
+                    print anwserDict[map_name][self.STATISTIC_NAME[anws]]['Y']['PERCENT']
+                    print 'checkpoints'
+                    tString = ''
+                    for doc in anwserDict[map_name][self.STATISTIC_NAME[anws]]['Y']['CHECKPOINT_LIST']:
+                        tString += doc['CHECKPOINT'] + ','
+                    print tString
+                    print
+
+                    print 'XY'
+                    print anwserDict[map_name][self.STATISTIC_NAME[anws]]['XY']['VALUE']
+                    print anwserDict[map_name][self.STATISTIC_NAME[anws]]['XY']['PERCENT']
+                    print 'checkpoints'
+                    tString = ''
+                    for doc in anwserDict[map_name][self.STATISTIC_NAME[anws]]['XY']['CHECKPOINT_LIST']:
+                        tString += doc['CHECKPOINT'] + ','
+                    print tString
+
+
+###############################################################################
+    """methods neede for showing effectiveness of certain algorithm """
+
+    def countNumberOfCheckPointForGivenError(self,errorDict):
+        resultDocs = {}
+        self.loadDataResult(resultDocs)
+
+        anwserDict = {}
+        self.preapreAnwserDict(anwserDict)
+        for map_name in self.map:
+            for doc in resultDocs[map_name]:
+                for dataStatistic in self.STATISTIC_NAME:
+                    if doc['RESULTS'][dataStatistic]['ERROR']['X'] <= float(errorDict['X']):
+                        anwserDict[map_name][dataStatistic]['X']['CHECKPOINT_LIST'].append(doc)
+                        if doc['RESULTS'][dataStatistic]['ERROR']['Y'] <= float(errorDict['Y']):
+                            anwserDict[map_name][dataStatistic]['Y']['CHECKPOINT_LIST'].append(doc)
+
+
+        for map_name in self.map:
+            for dataStatistic in self.STATISTIC_NAME:
+                xList = anwserDict[map_name][dataStatistic]['X']['CHECKPOINT_LIST']
+                yList = anwserDict[map_name][dataStatistic]['Y']['CHECKPOINT_LIST']
+
+                for xDoc in xList:
+                    for yDoc in yList:
+                        if xDoc['CHECKPOINT'] == yDoc['CHECKPOINT']:
+                            anwserDict[map_name][dataStatistic]['XY']['CHECKPOINT_LIST'].append(xDoc)
+
+        numberOfCheckpoints = len(resultDocs['RSSI'])
+        for map_name in self.map:
+            for dataStatistic in self.STATISTIC_NAME:
+                lenList = len(anwserDict[map_name][dataStatistic]['X']['CHECKPOINT_LIST'])
+                anwserDict[map_name][dataStatistic]['X']['VALUE'] = str(lenList) + '/' + str(numberOfCheckpoints)
+                anwserDict[map_name][dataStatistic]['X']['PERCENT'] = (lenList/float(numberOfCheckpoints)) * 100
+
+                lenList = len(anwserDict[map_name][dataStatistic]['Y']['CHECKPOINT_LIST'])
+                anwserDict[map_name][dataStatistic]['Y']['VALUE'] = str(lenList) + '/' + str(numberOfCheckpoints)
+                anwserDict[map_name][dataStatistic]['Y']['PERCENT'] = (lenList/float(numberOfCheckpoints)) * 100
+
+                lenList = len(anwserDict[map_name][dataStatistic]['XY']['CHECKPOINT_LIST'])
+                anwserDict[map_name][dataStatistic]['XY']['VALUE'] = str(lenList) + '/' + str(numberOfCheckpoints)
+                anwserDict[map_name][dataStatistic]['XY']['PERCENT'] = (lenList/float(numberOfCheckpoints)) * 100
+
+        return anwserDict
+
+    """method preapres anwser dict for number of checkpoints"""
+    def preapreAnwserDict(self,tDict):
+        tDict['RSSI'] = {}
+        tDict['MAGNETIC'] = {}
+        for dataStatistic in self.STATISTIC_NAME:
+            tmpDict ={}
+            tmpDict['VALUE'] = ''
+            tmpDict['PERCENT'] = 0
+            tmpDict['CHECKPOINT_LIST'] = []
+            tDict['RSSI'][dataStatistic] = {}
+            tDict['RSSI'][dataStatistic]['X'] = tmpDict
+            tmpDict ={}
+            tmpDict['VALUE'] = ''
+            tmpDict['PERCENT'] = 0
+            tmpDict['CHECKPOINT_LIST'] = []
+            tDict['RSSI'][dataStatistic]['Y'] = tmpDict
+            tmpDict ={}
+            tmpDict['VALUE'] = ''
+            tmpDict['PERCENT'] = 0
+            tmpDict['CHECKPOINT_LIST'] = []
+            tDict['RSSI'][dataStatistic]['XY'] = tmpDict
+
+            tmpDict ={}
+            tmpDict['VALUE'] = ''
+            tmpDict['PERCENT'] = 0
+            tmpDict['CHECKPOINT_LIST'] = []
+            tDict['MAGNETIC'][dataStatistic] = {}
+            tDict['MAGNETIC'][dataStatistic]['X'] = tmpDict
+            tmpDict ={}
+            tmpDict['VALUE'] = ''
+            tmpDict['PERCENT'] = 0
+            tmpDict['CHECKPOINT_LIST'] = []
+            tDict['MAGNETIC'][dataStatistic]['Y'] = tmpDict
+            tmpDict ={}
+            tmpDict['VALUE'] = ''
+            tmpDict['PERCENT'] = 0
+            tmpDict['CHECKPOINT_LIST'] = []
+            tDict['MAGNETIC'][dataStatistic]['XY'] = tmpDict
+
 ###############################################################################
     """method counts max. min. mode, mean of error per data statisitcs"""
     def countDataStatisticsError(self):
@@ -396,13 +540,13 @@ class Results(object):
         for i in range(len(tmpX) - 2):
             tmplist = [tmpX[i],tmpY[i]]
             tmpTuple = tuple(tmplist)
-            plt.annotate('CHOSEN_POINT',xy=tmpTuple)
+            plt.annotate('CP',xy=tmpTuple)
         tmplist = [tmpX[-1],tmpY[-1]]
         tmpTuple = tuple(tmplist)
-        plt.annotate('REAL_POSITION',xy=tmpTuple)
+        plt.annotate('RP',xy=tmpTuple)
         tmplist = [tmpX[-2],tmpY[-2]]
         tmpTuple = tuple(tmplist)
-        plt.annotate('LOCALIZATION_POSITION',xy=tmpTuple)
+        plt.annotate('LP',xy=tmpTuple)
         if choose == '0':
             plt.title('MAGNETIC - CHECKPOINT ' + checkpoint)
         elif choose == '1':
@@ -773,7 +917,8 @@ def main():
     2 - count data statistic error
     3 - show the smallest error per coordinate
     4 - show error od x and y for certain data statistics
-    5 - show chosen points, acctual position of checkpoint and localization'''
+    5 - show chosen points, acctual position of checkpoint and localization
+    6 - show numbr of checkpoints belowe given x and y error'''
     while(True):
         time.sleep(1)
         print msg
@@ -794,6 +939,8 @@ def main():
             results.showErrorForCoordinatesFoStatistics()
         elif anw == '5':
             results.showLocatedCheckpointAndPoints()
+        elif anw == '6':
+            results.showNumberOfCheckPointsBeloweError()
 
 
 if __name__ == '__main__':
