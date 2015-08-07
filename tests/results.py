@@ -540,10 +540,10 @@ class Results(object):
         for i in range(len(tmpX) - 2):
             tmplist = [tmpX[i],tmpY[i]]
             tmpTuple = tuple(tmplist)
-            plt.annotate('CP',xy=tmpTuple)
+            plt.annotate('RP',xy=tmpTuple)
         tmplist = [tmpX[-1],tmpY[-1]]
         tmpTuple = tuple(tmplist)
-        plt.annotate('RP',xy=tmpTuple)
+        plt.annotate('CP',xy=tmpTuple)
         tmplist = [tmpX[-2],tmpY[-2]]
         tmpTuple = tuple(tmplist)
         plt.annotate('LP',xy=tmpTuple)
@@ -918,7 +918,7 @@ def main():
     3 - show the smallest error per coordinate
     4 - show error od x and y for certain data statistics
     5 - show chosen points, acctual position of checkpoint and localization
-    6 - show numbr of checkpoints belowe given x and y error'''
+    6 - show number of checkpoints belowe given x and y error'''
     while(True):
         time.sleep(1)
         print msg
