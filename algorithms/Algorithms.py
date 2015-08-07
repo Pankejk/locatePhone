@@ -33,7 +33,7 @@ class Algorithms (object):
         self.ALGORITHM_DISTANCE_NAME = ['STATISTICS', 'PROBABILITY']
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_']
         self.STANDARD_DEVIATION_RSSI = 6
-        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance]
+        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_NEW'
 
         self.x_distinct = None
         self.y_distinct = None
@@ -494,26 +494,37 @@ class Algorithms (object):
             anws = raw_input('skip this point?(y/n)')
             if anws == 'n':
                 '''choosing points on rssi map '''
-                counter = 0
-                print 'RSSI'
-                for doc in self.sumDiff['RSSI']:
-                    print 'X: ' + str(doc['X_FINGERPRINT'])
-                    print 'Y: ' + str(doc['Y_FINGERPRINT'])
-                    self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
-                    counter += 1
-                    print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
-                    self.showPointsOnMap(self.locateCheckpoint['RSSI'],'RSSI')
-
-                '''choosing points on magnetic map '''
-                counter = 0
-                print 'MAGNETIC'
-                for doc in self.sumDiff['MAGNETIC']:
-                    print 'X: ' + str(doc['X_FINGERPRINT'])
-                    print 'Y: ' + str(doc['Y_FINGERPRINT'])
-                    self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
-                    counter += 1
-                    print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
-                    self.showPointsOnMap(self.locateCheckpoint['MAGNETIC'],'MAGNETIC')
+                anws = raw_input('skip this rssi?(y/n)')
+                if anws == 'n':
+                    counter = 0
+                    print 'RSSI'
+                    for doc in self.sumDiff['RSSI']:
+                        print 'X: ' + str(doc['X_FINGERPRINT'])
+                        print 'Y: ' + str(doc['Y_FINGERPRINT'])
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                        counter += 1
+                        print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
+                        self.showPointsOnMap(self.locateCheckpoint['RSSI'],'RSSI')
+                elif anws == 'y':
+                    '''choosing points on rssi map '''
+                    for doc in self.sumDiff['RSSI']:
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                anws = raw_input('skip this magnetic?(y/n)')
+                if anws == 'n':
+                    '''choosing points on magnetic map '''
+                    counter = 0
+                    print 'MAGNETIC'
+                    for doc in self.sumDiff['MAGNETIC']:
+                        print 'X: ' + str(doc['X_FINGERPRINT'])
+                        print 'Y: ' + str(doc['Y_FINGERPRINT'])
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                        counter += 1
+                        print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
+                        self.showPointsOnMap(self.locateCheckpoint['MAGNETIC'],'MAGNETIC')
+                elif anws == 'y':
+                    '''choosing points on magnetic map '''
+                    for doc in self.sumDiff['MAGNETIC']:
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
             elif anws == 'y':
                 '''choosing points on rssi map '''
                 for doc in self.sumDiff['RSSI']:
@@ -609,26 +620,38 @@ class Algorithms (object):
             anws = raw_input('skip this point?(y/n)')
             if anws == 'n':
                 '''choosing points on rssi map '''
-                counter = 0
-                print 'RSSI'
-                for doc in self.sumDiff['RSSI']:
-                    print 'X: ' + str(doc['X_FINGERPRINT'])
-                    print 'Y: ' + str(doc['Y_FINGERPRINT'])
-                    self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc)
-                    counter += 1
-                    print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
-                    self.showPointsOnMap(self.locateCheckpoint['RSSI'],'RSSI')
+                anws = raw_input('skip this rssi?(y/n)')
+                if anws == 'n':
+                    counter = 0
+                    print 'RSSI'
+                    for doc in self.sumDiff['RSSI']:
+                        print 'X: ' + str(doc['X_FINGERPRINT'])
+                        print 'Y: ' + str(doc['Y_FINGERPRINT'])
+                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                        counter += 1
+                        print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
+                        self.showPointsOnMap(self.locateCheckpoint['RSSI'],'RSSI')
+                elif anws == 'y':
+                    '''choosing points on rssi map '''
+                    for doc in self.sumDiff['RSSI']:
+                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc)
 
-                '''choosing points on magnetic map '''
-                counter = 0
-                print 'MAGNETIC'
-                for doc in self.sumDiff['MAGNETIC']:
-                    print 'X: ' + str(doc['X_FINGERPRINT'])
-                    print 'Y: ' + str(doc['Y_FINGERPRINT'])
-                    self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
-                    counter += 1
-                    print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
-                    self.showPointsOnMap(self.locateCheckpoint['MAGNETIC'],'MAGNETIC')
+                anws = raw_input('skip this magnetic?(y/n)')
+                if anws == 'n':
+                    '''choosing points on magnetic map '''
+                    counter = 0
+                    print 'MAGNETIC'
+                    for doc in self.sumDiff['MAGNETIC']:
+                        print 'X: ' + str(doc['X_FINGERPRINT'])
+                        print 'Y: ' + str(doc['Y_FINGERPRINT'])
+                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                        counter += 1
+                        print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
+                        self.showPointsOnMap(self.locateCheckpoint['MAGNETIC'],'MAGNETIC')
+                elif anws == 'y':
+                    '''choosing points on magnetic map '''
+                    for doc in self.sumDiff['MAGNETIC']:
+                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
             elif anws == 'y':
                 '''choosing points on rssi map '''
                 for doc in self.sumDiff['RSSI']:
@@ -828,8 +851,14 @@ class Algorithms (object):
     """mehod shows points chosen by algorithm"""
     def showPointsOnMap(self, tList, map_name):
         while(True):
-            anws = int(raw_input('%s\nchoose data statistic(0-%s):' % (str(self.STATISTIC_NAME),(len(self.STATISTIC_NAME) - 1))))
-            dataStatistic = self.STATISTIC_NAME[anws]
+            try:
+                anws = int(raw_input('%s\nchoose data statistic(0-%s):' % (str(self.STATISTIC_NAME),(len(self.STATISTIC_NAME) - 1))))
+            except:
+                anws = 0
+            try:
+                dataStatistic = self.STATISTIC_NAME[anws]
+            except:
+                dataStatistic = self.STATISTIC_NAME[0]
 
             dataDict = {}
             dataDict['X'] = []
@@ -841,7 +870,7 @@ class Algorithms (object):
                 dataDict['COLOUR'].append(0)
                 tmpList = [point['X_FINGERPRINT'],point['Y_FINGERPRINT']]
                 tmpTuple = tuple(tmpList)
-                plt.annotate('CHOSEN_POINT',xy=tmpTuple)
+                plt.annotate('RP',xy=tmpTuple)
 
 
             dataDict['X'].append(float(self.checkPoints[self.currentCheckpoint]['X']))
@@ -849,7 +878,7 @@ class Algorithms (object):
             dataDict['COLOUR'].append(100)
             tmpList = [float(self.checkPoints[self.currentCheckpoint]['X']), float(self.checkPoints[self.currentCheckpoint]['Y'])]
             tmpTuple = tuple(tmpList)
-            plt.annotate('REAL_POINT',xy=tmpTuple)
+            plt.annotate('CP',xy=tmpTuple)
 
             plt.scatter(dataDict['X'], dataDict['Y'],c=dataDict['COLOUR'])
             plt.xlim(0,max(self.x_distinct))
