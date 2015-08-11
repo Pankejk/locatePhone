@@ -21,6 +21,9 @@ class DrawFingerprint(object):
 
         self.availableCollections = str(self.db_fingerprint.collection_names())
         self.x_distinct = self.coll.distinct('X')
+        if self.collName == 'kopalnia_DATASIZE_200':
+            self.x_distinct.append(1)
+            self.x_distinct.append(3)
         self.y_distinct = self.coll.distinct('Y')
         self.x_distinct.sort()
         self.y_distinct.sort()
@@ -53,14 +56,21 @@ class DrawFingerprint(object):
         drawArray['X'], drawArray['Y'] = np.meshgrid(drawArray['X'],drawArray['Y'])
 
         rssiList = []
-        for x in self.x_distinct:
-            for y in self.y_distinct:
+        for y in self.y_distinct:
+            for x in self.x_distinct:
                 cursor = self.coll.find({'MAC_AP' : self.mac_ap_distinct[chosenAp], 'X': x, 'Y': y})
                 docs = [res for res in cursor]
                 if len(docs) == 0:
-                    rssiList.append(0)
+                    rssiList.append(-100)
                 elif len(docs) == 1:
                     rssiList.append(docs[0]['STATISTICS'][self.STATISTIC_NAME[anws]])
+        
+        if self.collName == 'kopalnia_DATASIZE_200':
+            for i in range(0,len(rssiList),len(self.x_distinct)):
+                if rssiList[i] == -100:
+                    rssiList[i] = rssiList[i+1]
+                    rssiList[i + len(self.x_distinct) - 1] = rssiList[i+1]
+                    
         finalList = []
         for i in range(0,len(rssiList),len(self.x_distinct)):
             finalList.append(rssiList[i:i+len(self.x_distinct)])
@@ -87,18 +97,25 @@ class DrawFingerprint(object):
         drawArray['X'], drawArray['Y'] = np.meshgrid(drawArray['X'],drawArray['Y'])
 
         rssiList = []
-        for x in self.x_distinct:
-            for y in self.y_distinct:
+        for y in self.y_distinct:
+            for x in self.x_distinct:
                 cursor = self.coll.find({'MAGNETIC_DATA' : {'$exists': True}, 'X': x, 'Y': y})
                 docs = [res for res in cursor]
                 if len(docs) == 0:
                     rssiList.append(0)
                 elif len(docs) == 1:
                     rssiList.append(docs[0]['STATISTICS_NORM'][self.STATISTIC_NAME[anws]])
+        
+        if self.collName == 'kopalnia_DATASIZE_200':
+            for i in range(0,len(rssiList),len(self.x_distinct)):
+                if rssiList[i] == 0:
+                    rssiList[i] = rssiList[i+1]
+                    rssiList[i + len(self.x_distinct) - 1] = rssiList[i+1]
+        
         finalList = []
         for i in range(0,len(rssiList),len(self.x_distinct)):
             finalList.append(rssiList[i:i+len(self.x_distinct)])
-
+        
         drawArray['MAGNETIC'] = np.asarray(finalList)
 
         print drawArray['X']
