@@ -85,6 +85,9 @@ class DrawFingerprint(object):
         ax = fig.gca(projection='3d')
         surf = ax.plot_surface(drawArray['X'], drawArray['Y'], drawArray['RSSI'],rstride=1, cstride=1, alpha=1,cmap=cm.jet,  linewidth=0)
         fig.colorbar(surf, shrink=0.5, aspect=5)
+        plt.title('RSSI[dbm] - ' + self.mac_ap_distinct[chosenAp])
+        plt.xlabel('width [m]')
+        plt.ylabel('height [m]')
         plt.show()
 
     '''method draws magnetic fingerprint - plot_surface'''
@@ -125,6 +128,9 @@ class DrawFingerprint(object):
         ax = fig.gca(projection='3d')
         surf = ax.plot_surface(drawArray['X'], drawArray['Y'], drawArray['MAGNETIC'],rstride=1, cstride=1, alpha=1,cmap=cm.jet,  linewidth=0)
         fig.colorbar(surf, shrink=0.5, aspect=5)
+        plt.title('MAGNETIC[mikroT]')
+        plt.xlabel('width [m]')
+        plt.ylabel('height [m]')
         plt.show()
 
     """method draws heat map for certain AP"""
