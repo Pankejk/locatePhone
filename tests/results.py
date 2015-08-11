@@ -112,7 +112,7 @@ class Results(object):
             plt.xlim(0,max(self.x_distinct))
             plt.ylim(0,max(self.y_distinct))
             plt.xlabel('width [m]')
-            plt.ylabel('height [m]')
+            plt.ylabel('length [m]')
             plt.show()
 
     """method show checkpoint located by algorithm and chosen points"""
@@ -552,7 +552,7 @@ class Results(object):
         elif choose == '1':
             plt.title('RSSI - CHECKPOINT ' + checkpoint)
         plt.xlabel('width [m]')
-        plt.ylabel('height [m]')
+        plt.ylabel('length [m]')
         plt.show()
 
     '''reading checkpoints coordinates from text file '''

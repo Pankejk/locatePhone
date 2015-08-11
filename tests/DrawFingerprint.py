@@ -87,7 +87,7 @@ class DrawFingerprint(object):
         fig.colorbar(surf, shrink=0.5, aspect=5)
         plt.title('RSSI[dbm] - ' + self.mac_ap_distinct[chosenAp])
         plt.xlabel('width [m]')
-        plt.ylabel('height [m]')
+        plt.ylabel('length [m]')
         plt.show()
 
     '''method draws magnetic fingerprint - plot_surface'''
@@ -130,7 +130,7 @@ class DrawFingerprint(object):
         fig.colorbar(surf, shrink=0.5, aspect=5)
         plt.title('MAGNETIC[mikroT]')
         plt.xlabel('width [m]')
-        plt.ylabel('height [m]')
+        plt.ylabel('length [m]')
         plt.show()
 
     """method draws heat map for certain AP"""
