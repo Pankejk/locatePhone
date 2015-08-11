@@ -632,17 +632,23 @@ class Algorithms (object):
        in certain coordinates"""
     def probabilityDiffrence(self):
         '''get rssi, magnetic fingerprintmap and all data for certain checkpoint'''
-        magneticFingerprintDocs = self.collFingerprint.find({'MAGNETIC_DATA': {'$exists' : True}})
-        rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
-        magneticLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'MAGNETIC_DATA': {'$exists' : True}})
-        rssiLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'RSSI_DATA': {'$exists' : True}})
+        #magneticFingerprintDocs = self.collFingerprint.find({'MAGNETIC_DATA': {'$exists' : True}})
+        #rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
+        #magneticLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'MAGNETIC_DATA': {'$exists' : True}})
+        #rssiLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'RSSI_DATA': {'$exists' : True}})
 
         '''parse cursor data to python dictonary'''
-        magneticFingerprintDocs = [res for res in magneticFingerprintDocs]
-        rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
-        magneticLocateDocs = [res for res in magneticLocateDocs]
-        rssiLocateDocs = [res for res in rssiLocateDocs]
+        #magneticFingerprintDocs = [res for res in magneticFingerprintDocs]
+        #rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
+        #magneticLocateDocs = [res for res in magneticLocateDocs]
+        #rssiLocateDocs = [res for res in rssiLocateDocs]
 
+        dic = self.loadsDataFingerPrintAndLocate()
+        magneticFingerprintDocs = dic['FINGERPRINT_MAGNETIC']
+        rssiFingerprintDocs = dic['FINGERPRINT_RSSI']
+        magneticLocateDocs =  dic['LOCATE_MAGNETIC']
+        rssiLocateDocs = dic['LOCATE_RSSI']
+        
         '''counting diff for RSSI map'''
         for docLocate in rssiLocateDocs:
             for docFingerprint in rssiFingerprintDocs:
