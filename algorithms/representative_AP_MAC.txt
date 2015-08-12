@@ -1,0 +1,47 @@
+f8:d1:11:48:9b:26 - [-68,-44]mój AP, dobry dla calego x, y [0,18]
+28:80:23:28:8a:02 - [-84, -75], dobry dla calego x, y[0,18]
+28:80:23:28:7e:80 - [-99,-75], dzieli mape po ukosie od (12,0) do (0,36)
+28:80:23:28:7e:81 - [-92, -75], dzieli mape po ukosie od (12,0) do (0,36)
+68:7f:74:09:f6:8b - [-60, -40], dzieli mape prosta x = 6, chyba pingwin
+e8:94:f6:3d:10:58 - [ -98, -84], dużo pustych miesc gdzie nie widać AP
+28:80:23:28:7e:82 - [-92, -74], mape można podzielic na ukos od (12,0) do (0,36)
+28:80:23:28:8a:00 - [-87, -75], kiepska mapa, mały zakres, ewentulanie można podizeilic prosta od (0,0) do (12,36)
+28:80:23:28:7f:f1 - [-97.5, -77.5], jest pare miejsc gdzie go nie widać w ogóle, nie da sie rozsadnie podzielic mapy
+28:80:23:28:8a:01 - [-88, -74], w paru miejscach go nie widać, podział mapy prostą (0,0) do (12,36)
+28:80:23:2a:ce:71 - [-98, -82], dużo miejsc gdzie nie widać AP,
+00:1a:70:a2:61:b0 - [-96, -64(jeden pkt)], pare miejsc gdzie nie widać AP,
+28:80:23:28:7f:f0 - [-97.5, -80], sporo miejsc gdzie nie widać AP,
+28:80:23:28:8a:10 - [-96, -72], dużo miesc gdzie nie widać AP
+28:80:23:28:8a:b2 - [-97.5, -77.5] pare miejsc gdzie nie widać AP
+28:80:23:28:8a:b1 - [-96, -72] sporo miejsc gdzie nie widać AP
+28:80:23:28:7f:f2 - [-98, -82] sporo miejs gdzie nie widać AP
+28:80:23:2a:ce:70 - [-98,-82] dużo miejsc gdzie nie ma AP
+28:80:23:28:7e:90 - [-96, -72] dużo miejsc gdzie nie widać AP
+28:80:23:28:8a:b0 - [-99, -75] sporo miejsc gdzie sygnał w ogóle nie był widizlany
+28:80:23:28:7e:92 - [-96, -72] sporo miejsc zerowych
+28:80:23:2a:be:90 - [-99, -91] Ap widoczny w 4pkt.
+28:80:23:2a:cd:10 - [-99, -88.5], AP widoczny w 10 pkt.
+28:80:23:2a:ce:72 - [-98, -82], dużo  miejsc gdzie nie widać AP
+28:80:23:2a:be:91 - [-99, -91], AP widoczny w 5 pkt
+28:80:23:28:8a:12 - [-96, -64], dużo miejsc gdzie nie widać AP, można podzielić mape prostą (0,0) d0 (12,36)
+28:80:23:2a:7e:12 - [-99, -91], AP widoczny w 5 pkt
+28:80:23:28:8a:11 - [-96,-68], sporo miejsc gdzie nie widać AP
+28:80:23:2a:7e:11 - [-88.5, -99], AP widoczny w 10 pkt
+28:80:23:2a:7e:10 - [-99, -88.5], AP widoczny w 7 pkt.
+28:80:23:28:8a:a0 - [-99, -92], AP widoczny w 9 pkt
+c4:6e:1f:35:c4:8c - [-98,-84], AP widoczny w 15 pkt
+28:80:23:28:7e:91 - [-97.5, -77.5], sporo mijesc gdzie nie widać AP
+28:80:23:28:7f:e2 - [-99.2, -92.8], AP widoczny w 3 pkt
+28:80:23:28:7f:e1 - [-99.2, -94.4], AP widoczny w jednym pkt.
+28:80:23:28:7f:e0 - [-99.6, -94.8], AP widoczny w 1 pkt
+64:66:b3:b0:96:fc - [-99.0, -90], AP widoczny w 2 pkt
+28:80:23:2a:cf:10 - [-99.2, -94.4], AP widoczny w 1 pkt
+28:80:23:2a:cd:11 - [-99,-87], AP w 13 pkt.
+28:80:23:2a:cd:12 - [-98, -86], AP widoczny w 11 pkt
+28:80:23:2a:be:31 - [-99.2, -94.4], AP widoczny w 1 pkt.
+28:80:23:28:8a:a1 - [-99.5, -95.5], Ap widoczny w 5 pkt.
+28:80:23:28:9e:90 - [-99, -91], AP widoczny w 5 pkt.
+28:80:23:28:8a:a2 - [-99, -88.5], AP widoczny w 8 pkt.
+28:80:23:2a:be:30 - [-99, -91], AP widoczny w 2 pkt.
+28:80:23:28:9e:92 - [-98, -84], AP widoczny w 8 pkt.
+28:80:23:28:9e:91 - [-98, -86], AP widoczny w 7 pkt.
