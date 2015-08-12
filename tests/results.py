@@ -352,6 +352,53 @@ class Results(object):
                     print tString
 
 
+    """method shows RSSI for certain AP and magnetic field for certain checkpoint
+       and for certain position on map"""
+       
+    def showRssiAndMagneticCheckpointLocate(self):
+        while(True):
+            checkpoint = raw_input('q - quit\n%s\nChoose checkpoint: ' % (str(self.distinctCp)))
+            if checkpoint == 'q':
+                break
+            coordinates = raw_input('X: %s\nY: %s\nChoose choordinates(x y): ' % (str(self.x_distinct),str(self.y_distinct)))
+            coordinates = coordinates.split(' ')
+            if len(coordinates) != 2:
+                print 'Smth went wrong!'
+                return
+        
+            coordinates[0] = int(coordinates[0])
+            coordinates[1] = int(coordinates[1])
+            dataStatistic = int(raw_input('''%s\nchoose statistic data(0,%s)''' % (str(self.STATISTIC_NAME),(len(self.STATISTIC_NAME) - 1))))
+            dataStatistic = self.STATISTIC_NAME[dataStatistic]                          
+            
+            cursor = self.coll_fingerprint.find({'X': coordinates[0], 'Y': coordinates[1]})
+            fingerprintDocs = [res for res in cursor]
+            cursor = self.coll.find({'CHECKPOINT': checkpoint})
+            locateDocs = [res for res in cursor]
+        
+            print 'FINGERPRINT - X: %s Y: %s' % (str(coordinates[0]), str(coordinates[1]))
+            print
+            for doc in fingerprintDocs:
+                if 'RSSI_DATA' in doc.viewkeys():
+                    print 'RSSI - %s ' % (doc['MAC_AP'])
+                    print dataStatistic + ' - ' + str(doc['STATISTICS'][dataStatistic]) 
+                elif 'MAGNETIC_DATA' in doc.viewkeys():
+                    print 'MAGNETIC - X: %s, Y: %s' % (str(coordinates[0]), str(coordinates[1]))
+                    print dataStatistic + ' - ' + str(doc['STATISTICS_NORM'][dataStatistic])
+                
+            checkpointDic = self.checkPoints[checkpoint]
+            print
+            print 'CHECKPOINT - %s - X: %s, Y: %s' % (checkpoint,str(checkpointDic['X']), str(checkpointDic['Y']))
+            print
+            for doc in fingerprintDocs:
+                if 'RSSI_DATA' in doc.viewkeys():
+                    print 'RSSI - ' + doc['MAC_AP']
+                    print dataStatistic + ' - ' + str(doc['STATISTICS'][dataStatistic]) 
+                elif 'MAGNETIC_DATA' in doc.viewkeys():
+                    print 'MAGNETIC'
+                    print dataStatistic + ' - ' + str(doc['STATISTICS_NORM'][dataStatistic])
+    
+
 ###############################################################################
     """methods neede for showing effectiveness of certain algorithm """
 
@@ -918,7 +965,8 @@ def main():
     3 - show the smallest error per coordinate
     4 - show error od x and y for certain data statistics
     5 - show chosen points, acctual position of checkpoint and localization
-    6 - show number of checkpoints belowe given x and y error'''
+    6 - show number of checkpoints belowe given x and y error
+    7 - show RSSI value and magnetic field for ceratain refernce point and checkpoint '''
     while(True):
         time.sleep(1)
         print msg
@@ -941,6 +989,8 @@ def main():
             results.showLocatedCheckpointAndPoints()
         elif anw == '6':
             results.showNumberOfCheckPointsBeloweError()
+        elif anw == '7':
+            results.showRssiAndMagneticCheckpointLocate()
 
 
 if __name__ == '__main__':
