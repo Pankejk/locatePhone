@@ -34,7 +34,8 @@ class Algorithms (object):
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_']
         self.STANDARD_DEVIATION_RSSI = 6
         self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_NEW'
-
+        self.GOOD_AP_LIST = ['f8:d1:11:48:9b:26', '68:7f:74:09:f6:8b']
+        
         self.x_distinct = None
         self.y_distinct = None
         self.checkPoints = {}
@@ -407,12 +408,19 @@ class Algorithms (object):
 
         '''get rssi, magnetic fingerprintmap and all data for certain checkpoint'''
         magneticFingerprintDocs = self.collFingerprint.find({'MAGNETIC_DATA': {'$exists' : True}})
-        rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
+        #rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
         magneticLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'MAGNETIC_DATA': {'$exists' : True}})
         rssiLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'RSSI_DATA': {'$exists' : True}})
 
         '''parse cursor data to python dictonary'''
         magneticFingerprintDocs = [res for res in magneticFingerprintDocs]
+        rssiFingerprintDocs = []
+        for mac in self.GOOD_AP_LIST:
+            cursor = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}, 'MAC_AP': mac})
+            tmp = [res for res in cursor]
+            for doc in tmp:
+                rssiFingerprintDocs.append(doc)
+        
         rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
         magneticLocateDocs = [res for res in magneticLocateDocs]
         rssiLocateDocs = [res for res in rssiLocateDocs]
@@ -563,13 +571,19 @@ class Algorithms (object):
     def probabilityDiffrence(self):
         '''get rssi, magnetic fingerprintmap and all data for certain checkpoint'''
         magneticFingerprintDocs = self.collFingerprint.find({'MAGNETIC_DATA': {'$exists' : True}})
-        rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
+        #rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
         magneticLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'MAGNETIC_DATA': {'$exists' : True}})
         rssiLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'RSSI_DATA': {'$exists' : True}})
 
         '''parse cursor data to python dictonary'''
         magneticFingerprintDocs = [res for res in magneticFingerprintDocs]
-        rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
+        rssiFingerprintDocs = []
+        for mac in self.GOOD_AP_LIST:
+            cursor = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}, 'MAC_AP': mac})
+            tmp = [res for res in cursor]
+            for doc in tmp:
+                rssiFingerprintDocs.append(doc)
+        #rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
         magneticLocateDocs = [res for res in magneticLocateDocs]
         rssiLocateDocs = [res for res in rssiLocateDocs]
 
