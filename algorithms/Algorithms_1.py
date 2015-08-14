@@ -2,6 +2,7 @@
 
 from pymongo import MongoClient
 import sys
+import os
 import operator
 
 import time
@@ -33,8 +34,8 @@ class Algorithms (object):
         self.ALGORITHM_DISTANCE_NAME = ['STATISTICS', 'PROBABILITY']
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_']
         self.STANDARD_DEVIATION_RSSI = 6
-        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_NEW'
-        self.GOOD_AP_LIST = ['f8:d1:11:48:9b:26', '68:7f:74:09:f6:8b']
+        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_' +os.path.basename(__file__).split('.')[0]
+        self.GOOD_AP_LIST = ['f8:d1:11:48:9b:26', '68:7f:74:09:f6:8b', '28:80:23:28:7e:82', '28:80:23:28:7f:f0', '28:80:23:28:8a:1', '28:80:23:28:8a:b2', '14:cc:20:d1:51:04']
         
         self.x_distinct = None
         self.y_distinct = None

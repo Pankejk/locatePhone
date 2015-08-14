@@ -15,7 +15,7 @@ class Algorithms (object):
 
     ''' Algorithm class '''
 
-    def __init__(self, collectionName, collectionNameLocate, checkPointFile, numberNeighbours, algorithmDistance, algorithmChoosePoints, mode):
+    def __init__(self, collectionName, collectionNameLocate, checkPointFile, numberNeighbours, algorithmDistance, algorithmChoosePoints, mode, listChangeDiffPercent):
 
         '''constructor'''
 
@@ -26,6 +26,7 @@ class Algorithms (object):
         self.choosenAlgorithmDistance = algorithmDistance
         self.choosenAlgorithmChoosePoints = algorithmChoosePoints
         self.mode = mode
+        self.listChangeDiffPercent = listChangeDiffPercent
 
         self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE",
         "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50",
@@ -33,13 +34,14 @@ class Algorithms (object):
         self.ALGORITHM_DISTANCE_NAME = ['STATISTICS', 'PROBABILITY']
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_']
         self.STANDARD_DEVIATION_RSSI = 6
-        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_NEW'
-
+        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_' + os.path.basename(__file__).split('.')[0]
+        self.map = ['RSSI','MAGNETIC']
+        
         self.x_distinct = None
         self.y_distinct = None
         self.checkPoints = {}
         self.checkpointsLocate = []
-        self.mac_fingerprint_distinct = {'RSSI': [], 'MAGNETIC': []}
+        self.mac_fingerprint_distinct = []
 
         self.conn = MongoClient()
 
@@ -61,7 +63,7 @@ class Algorithms (object):
         self.sumDiff = {}
         self.sumDiffMac = {}
         self.allDiff = {}
-        self.recordLocateCheckpointList = []
+        self.recordLocateCheckpointList = {}
 
         """data  for measuring time lasts algorithm"""
         self.startTime = None
@@ -86,6 +88,19 @@ class Algorithms (object):
 
 ###############################################################################
     ''' PREPARING CLASS FOR LOCATING BY ANY ALGORITHM'''
+    
+    """method preapres recordLocateCheckpointList. List keeps all steps of
+       choosing points on fingerprint map. Lists consits of list with
+       3 checkpoints during choosing phase"""
+    def prepareRecordLocateCheckpointList(self):
+        self.recordLocateCheckpointList = {}
+        
+        self.recordLocateCheckpointList['RSSI'] = {}
+        self.recordLocateCheckpointList['MAGNETIC'] = {}
+        
+        for map_name in self.map:
+            for dataStatistic in self.STATISTIC_NAME:
+                self.recordLocateCheckpointList[map_name][dataStatistic] = []
 
     ''' method preapre list to keep sum of all difference between certain CP
         for certain point at rssi map and magnetic map
@@ -312,29 +327,296 @@ class Algorithms (object):
         self.resultUsedAp(docDict['RSSI'])
         
     """record all chosen lists"""
-    def recordLocateCheckpoint(self, tList, map_name):
+    def recordLocateCheckpoint(self, tList, dataStatistic, map_name):
         decision = True
-        for tmpLocateChosenpointList in self.recordLocateCheckpoint[map_name]:
-            if self.checkIfListsAreTheSame(tmpLocateChosenpointList,tList):
-                decision = False
-                break
-        if decision == True:
-            self.recordLocateCheckpointList[map_name].append(tList)
         
-    """method checks if given to lists has the same points"""
-    def checkIfListsAreTheSame(self, tList1, tList2):
+        tmpLocateChosenpointList = self.recordLocateCheckpointList[map_name][dataStatistic]
+        if self.checkIfListsAreTheSame(tmpLocateChosenpointList,tList):
+            decision = False
+         
+        if decision == True:
+            self.recordLocateCheckpointList[map_name][dataStatistic].append(tList)
+        
+    """method checks if given recorderList has the same points"""
+    def checkIfListsAreTheSame(self, recorderLists, tList2):
         anwser = None
-        samePointsCounter = 0
-        for tItem1 in tList1:
-            for tItem2 in tList2:
-                if tItem1['X_FINGERPRINT'] == tItem2['X_FINGERPRINT'] and tItem1['Y_FINGERPRINT'] == tItem2['Y_FINGERPRINT']:
-                    samePointsCounter += 1
-        if samePointsCounter == self.numberOfNeighbours:
-            anwser = True
-        else:
-            anwser = False
+        samePointsCounterList = {}
+        for i in range(len(recorderLists)):
+            samePointsCounterList[i] = 0
+        
+        for i in range(len(recorderLists)):
+            tList1 = recorderLists[i]
+            for tItem1 in tList1:
+                for tItem2 in tList2:
+                    if tItem1['X_FINGERPRINT'] == tItem2['X_FINGERPRINT'] and tItem1['Y_FINGERPRINT'] == tItem2['Y_FINGERPRINT']:
+                        samePointsCounterList[i] += 1
+        
+        for i in range(len(recorderLists)):
+            if samePointsCounterList[i] == self.numberOfNeighbours:
+                anwser = True
+            else:
+                anwser = False
+        
         return anwser
-
+    
+    """method chooses the best list of neighbours points for certain dataStatistic"""
+    def chooseTheBestList(self):
+        bestListDict = {}
+        bestListDict['RSSI'] = {}
+        bestListDict['MAGNETIC'] = {}
+        
+        for map_name in self.map:
+            for dataStatistic in self.STATISTIC_NAME:
+                bestListDict[map_name][dataStatistic] = self.recordLocateCheckpointList[map_name][dataStatistic][-1]
+        
+        if self.mode == 'DEPLOY':
+            for map_name in self.map:
+                for dataStatistic in self.STATISTIC_NAME:
+                    name = 'SUM_DIFF_' + dataStatistic
+                    tBestList = bestListDict[map_name][dataStatistic]
+                    bestRatio = 0
+                    sumDiff = 0
+                    for cp in tBestList:
+                        sumDiff += cp[name]
+                    
+                    condition  = sumDiff + (self.listChangeDiffPercent * sumDiff)
+                    
+                    if self.numberOfNeighbours == 1:
+                        return
+                    elif self.numberOfNeighbours == 2:
+                        bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[1]['X_FINGERPRINT'])
+                        bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[1]['Y_FINGERPRINT'])
+                    elif self.numberOfNeighbours == 3:
+                        bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[1]['X_FINGERPRINT'])
+                        bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                        bestRatio += abs(tBestList[1]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                        bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[1]['Y_FINGERPRINT'])
+                        bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                        bestRatio += abs(tBestList[1]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                    elif self.numberOfNeighbours == 4:
+                        bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[1]['X_FINGERPRINT'])
+                        bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                        bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[3]['X_FINGERPRINT'])
+                        bestRatio += abs(tBestList[1]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                        bestRatio += abs(tBestList[1]['X_FINGERPRINT'] - tBestList[3]['X_FINGERPRINT'])
+                        bestRatio += abs(tBestList[2]['X_FINGERPRINT'] - tBestList[3]['X_FINGERPRINT'])
+                        bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[1]['Y_FINGERPRINT'])
+                        bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                        bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[3]['Y_FINGERPRINT'])
+                        bestRatio += abs(tBestList[1]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                        bestRatio += abs(tBestList[1]['Y_FINGERPRINT'] - tBestList[3]['Y_FINGERPRINT'])
+                        bestRatio += abs(tBestList[2]['Y_FINGERPRINT'] - tBestList[3]['Y_FINGERPRINT'])
+                
+                    for recordedList in self.recordLocateCheckpointList[map_name][dataStatistic]:
+                        nextRatio = 0
+                        nextSumDiff = 0
+                        for cp in recordedList:
+                            nextSumDiff += cp[name]
+                        
+                        if self.numberOfNeighbours == 1:
+                            return
+                        elif self.numberOfNeighbours == 2:
+                            nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[1]['X_FINGERPRINT'])
+                            nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[1]['Y_FINGERPRINT'])
+                        elif self.numberOfNeighbours == 3:
+                            nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[1]['X_FINGERPRINT'])
+                            nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                            nextRatio += abs(recordedList[1]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                            nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[1]['Y_FINGERPRINT'])
+                            nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                            nextRatio += abs(recordedList[1]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                        elif self.numberOfNeighbours == 4:
+                            nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[1]['X_FINGERPRINT'])
+                            nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                            nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[3]['X_FINGERPRINT'])
+                            nextRatio += abs(recordedList[1]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                            nextRatio += abs(recordedList[1]['X_FINGERPRINT'] - recordedList[3]['X_FINGERPRINT'])
+                            nextRatio += abs(recordedList[2]['X_FINGERPRINT'] - recordedList[3]['X_FINGERPRINT'])
+                            nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[1]['Y_FINGERPRINT'])
+                            nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                            nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[3]['Y_FINGERPRINT'])
+                            nextRatio += abs(recordedList[1]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                            nextRatio += abs(recordedList[1]['Y_FINGERPRINT'] - recordedList[3]['Y_FINGERPRINT'])
+                            nextRatio += abs(recordedList[2]['Y_FINGERPRINT'] - recordedList[3]['Y_FINGERPRINT'])
+                    
+                        if bestRatio > nextRatio and nextSumDiff <= condition:
+                            bestRatio = nextRatio
+                            bestListDict[map_name][dataStatistic] = recordedList
+        elif self.mode == 'DEBUG':
+            anws = raw_input('skip this point (y/n)')
+            if anws == 'n':
+                for map_name in self.map:
+                    anws = raw_input('skip this map - %s(y/n)' % (map_name))
+                    if anws == 'y':
+                        continue
+                    print map_name
+                    for dataStatistic in self.STATISTIC_NAME:
+                        anws = raw_input('skip this data statistic?(y/n)')
+                        if anws == 'y':
+                            continue
+                        print dataStatistic
+                        name = 'SUM_DIFF_' + dataStatistic
+                        tBestList = bestListDict[map_name][dataStatistic]
+                        bestRatio = 0
+                        sumDiff = 0
+                        for cp in tBestList:
+                            sumDiff += cp[name]
+                    
+                        condition  = sumDiff + (self.listChangeDiffPercent * sumDiff)
+                        print sumDiff
+                        print condition
+                        
+                        if self.numberOfNeighbours == 1:
+                            return
+                        elif self.numberOfNeighbours == 2:
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[1]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[1]['Y_FINGERPRINT'])
+                        elif self.numberOfNeighbours == 3:
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[1]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[1]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                        elif self.numberOfNeighbours == 4:
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[1]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[3]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['X_FINGERPRINT'] - tBestList[3]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[2]['X_FINGERPRINT'] - tBestList[3]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[1]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[3]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['Y_FINGERPRINT'] - tBestList[3]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[2]['Y_FINGERPRINT'] - tBestList[3]['Y_FINGERPRINT'])
+                    
+                        counter = 0
+                        for recordedList in self.recordLocateCheckpointList[map_name][dataStatistic]:
+                            nextRatio = 0
+                            nextSumDiff = 0
+                            for cp in recordedList:
+                                nextSumDiff += cp[name]
+                            print nextSumDiff
+                            if self.numberOfNeighbours == 1:
+                                return
+                            elif self.numberOfNeighbours == 2:
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[1]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[1]['Y_FINGERPRINT'])
+                            elif self.numberOfNeighbours == 3:
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[1]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[1]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                            elif self.numberOfNeighbours == 4:
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[1]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[3]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['X_FINGERPRINT'] - recordedList[3]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[2]['X_FINGERPRINT'] - recordedList[3]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[1]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[3]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['Y_FINGERPRINT'] - recordedList[3]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[2]['Y_FINGERPRINT'] - recordedList[3]['Y_FINGERPRINT'])
+                            counter += 1
+                        
+                            print 'PROGRESS: ' + str(counter) + '/' + str(len(self.recordLocateCheckpointList[map_name][dataStatistic]))
+                            print nextRatio
+                            print
+                            print bestRatio
+                            if bestRatio > nextRatio and nextSumDiff <= condition:
+                                print bestListDict[map_name][dataStatistic]
+                                print recordedList
+                                print 'BEFORE CHANGE'
+                                self.showPointsOnMap(bestListDict[map_name],map_name)
+                                bestRatio = nextRatio
+                                bestListDict[map_name][dataStatistic] = recordedList
+                                print 'AFTER CHANGE'
+                                self.showPointsOnMap(bestListDict[map_name],map_name)
+            elif anws == 'y':
+                for map_name in self.map:
+                    for dataStatistic in self.STATISTIC_NAME:
+                        name = 'SUM_DIFF_' + dataStatistic
+                        tBestList = bestListDict[map_name][dataStatistic]
+                        bestRatio = 0
+                        sumDiff = 0
+                        for cp in tBestList:
+                            sumDiff += cp[name]
+                    
+                        condition  = sumDiff + (self.listChangeDiffPercent * sumDiff)
+                        if self.numberOfNeighbours == 1:
+                            return
+                        elif self.numberOfNeighbours == 2:
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[1]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[1]['Y_FINGERPRINT'])
+                        elif self.numberOfNeighbours == 3:
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[1]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[1]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                        elif self.numberOfNeighbours == 4:
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[1]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['X_FINGERPRINT'] - tBestList[3]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['X_FINGERPRINT'] - tBestList[2]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['X_FINGERPRINT'] - tBestList[3]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[2]['X_FINGERPRINT'] - tBestList[3]['X_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[1]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[0]['Y_FINGERPRINT'] - tBestList[3]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['Y_FINGERPRINT'] - tBestList[2]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[1]['Y_FINGERPRINT'] - tBestList[3]['Y_FINGERPRINT'])
+                            bestRatio += abs(tBestList[2]['Y_FINGERPRINT'] - tBestList[3]['Y_FINGERPRINT'])
+                
+                        for recordedList in self.recordLocateCheckpointList[map_name][dataStatistic]:
+                            nextRatio = 0
+                            nextSumDiff = 0
+                            for cp in recordedList:
+                                nextSumDiff += cp[name]
+                                
+                            if self.numberOfNeighbours == 1:
+                                return
+                            elif self.numberOfNeighbours == 2:
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[1]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[1]['Y_FINGERPRINT'])
+                            elif self.numberOfNeighbours == 3:
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[1]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[1]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                            elif self.numberOfNeighbours == 4:
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[1]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['X_FINGERPRINT'] - recordedList[3]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['X_FINGERPRINT'] - recordedList[2]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['X_FINGERPRINT'] - recordedList[3]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[2]['X_FINGERPRINT'] - recordedList[3]['X_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[1]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[0]['Y_FINGERPRINT'] - recordedList[3]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['Y_FINGERPRINT'] - recordedList[2]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[1]['Y_FINGERPRINT'] - recordedList[3]['Y_FINGERPRINT'])
+                                nextRatio += abs(recordedList[2]['Y_FINGERPRINT'] - recordedList[3]['Y_FINGERPRINT'])
+                    
+                            if bestRatio > nextRatio and nextSumDiff <= condition:
+                                bestRatio = nextRatio
+                                bestListDict[map_name][dataStatistic] = recordedList
+        if self.mode == 'DEBUG':
+            return
+        
+        for map_name in self.map:
+            for dataStatistic in self.STATISTIC_NAME:
+                self.locateCheckpoint[map_name][dataStatistic] = bestListDict[map_name][dataStatistic]
 ###############################################################################
     '''GENERAL LOCATING ALGORITHM SCHEMA '''
 
@@ -346,6 +628,7 @@ class Algorithms (object):
         self.preapreSumDiffMac()
         self.preapreSumDiff()
         self.prepareAllDiff()
+        self.prepareRecordLocateCheckpointList()
         self.prepareLocateCheckpoint()
 
     '''method counts diffrences beetween single checkpoint and all positions in
@@ -526,14 +809,14 @@ class Algorithms (object):
                     for doc in self.sumDiff['RSSI']:
                         print 'X: ' + str(doc['X_FINGERPRINT'])
                         print 'Y: ' + str(doc['Y_FINGERPRINT'])
-                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc, 'RSSI')
                         counter += 1
                         print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
                         self.showPointsOnMap(self.locateCheckpoint['RSSI'],'RSSI')
                 elif anws == 'y':
                     '''choosing points on rssi map '''
                     for doc in self.sumDiff['RSSI']:
-                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc, 'RSSI')
                 anws = raw_input('skip this magnetic?(y/n)')
                 if anws == 'n':
                     '''choosing points on magnetic map '''
@@ -542,34 +825,40 @@ class Algorithms (object):
                     for doc in self.sumDiff['MAGNETIC']:
                         print 'X: ' + str(doc['X_FINGERPRINT'])
                         print 'Y: ' + str(doc['Y_FINGERPRINT'])
-                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc, 'MAGNETIC')
                         counter += 1
                         print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
                         self.showPointsOnMap(self.locateCheckpoint['MAGNETIC'],'MAGNETIC')
                 elif anws == 'y':
                     '''choosing points on magnetic map '''
                     for doc in self.sumDiff['MAGNETIC']:
-                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc, 'MAGNETIC')
+                
+                self.chooseTheBestList()
             elif anws == 'y':
                 '''choosing points on rssi map '''
                 for doc in self.sumDiff['RSSI']:
-                    self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                    self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc, 'RSSI')
 
                 '''choosing points on magnetic map '''
                 for doc in self.sumDiff['MAGNETIC']:
-                    self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                    self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc, 'MAGNETIC')
+                
+                self.chooseTheBestList()
         elif self.mode == 'DEPLOY':
             '''choosing points on rssi map '''
             for doc in self.sumDiff['RSSI']:
-                self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc, 'RSSI')
 
             '''choosing points on magnetic map '''
             for doc in self.sumDiff['MAGNETIC']:
-                self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc, 'MAGNETIC')
+            
+            self.chooseTheBestList()
 
     '''method chooses position with the smallest diffrence on map and put it to
     list accordingly to statistic data '''
-    def sortStatisticsSumDiffrence(self, locateDic, doc):
+    def sortStatisticsSumDiffrence(self, locateDic, doc, map_name):
         for dataStatistic in self.STATISTIC_NAME:
             if self.checkList(locateDic[dataStatistic],doc):
                 continue
@@ -578,9 +867,10 @@ class Algorithms (object):
                     locateDic[dataStatistic].append(doc)
             else:
                 locateDic[dataStatistic]= sorted(locateDic[dataStatistic], key=lambda x: x[name])
+                self.recordLocateCheckpoint(locateDic[dataStatistic],dataStatistic, map_name)
                 if locateDic[dataStatistic][-1][name] > doc[name]:
                     locateDic[dataStatistic][-1] = doc
-                    self.recordLocateCheckpoint()
+                    self.recordLocateCheckpoint(locateDic[dataStatistic],dataStatistic, map_name)
 
 ###############################################################################
     """probability implemetation"""
@@ -655,14 +945,14 @@ class Algorithms (object):
                     for doc in self.sumDiff['RSSI']:
                         print 'X: ' + str(doc['X_FINGERPRINT'])
                         print 'Y: ' + str(doc['Y_FINGERPRINT'])
-                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc, 'RSSI')
                         counter += 1
                         print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
                         self.showPointsOnMap(self.locateCheckpoint['RSSI'],'RSSI')
                 elif anws == 'y':
                     '''choosing points on rssi map '''
                     for doc in self.sumDiff['RSSI']:
-                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc, 'RSSI')
                 anws = raw_input('skip this magnetic?(y/n)')
                 if anws == 'n':
                     '''choosing points on magnetic map '''
@@ -671,34 +961,40 @@ class Algorithms (object):
                     for doc in self.sumDiff['MAGNETIC']:
                         print 'X: ' + str(doc['X_FINGERPRINT'])
                         print 'Y: ' + str(doc['Y_FINGERPRINT'])
-                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc, 'MAGNETIC')
                         counter += 1
                         print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
                         self.showPointsOnMap(self.locateCheckpoint['MAGNETIC'],'MAGNETIC')
                 elif anws == 'y':
                     '''choosing points on magnetic map '''
                     for doc in self.sumDiff['MAGNETIC']:
-                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                        self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc, 'MAGNETIC')
+                
+                self.chooseTheBestList()
             elif anws == 'y':
                 '''choosing points on rssi map '''
                 for doc in self.sumDiff['RSSI']:
-                    self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                    self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc, 'RSSI')
 
                 '''choosing points on magnetic map '''
                 for doc in self.sumDiff['MAGNETIC']:
-                    self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                    self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc, 'MAGNETIC')
+                
+                self.chooseTheBestList()
         elif self.mode == 'DEPLOY':
             '''choosing points on rssi map '''
             for doc in self.sumDiff['RSSI']:
-                self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                self.sortProbabilitySumDiffrence(self.locateCheckpoint['RSSI'],doc, 'RSSI')
 
             '''choosing points on magnetic map '''
             for doc in self.sumDiff['MAGNETIC']:
-                self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                self.sortProbabilitySumDiffrence(self.locateCheckpoint['MAGNETIC'],doc, 'MAGNETIC')
+            
+            self.chooseTheBestList()
 
     '''method chooses position with the bigest probability on map and put it to
     list accordingly to statistic data '''
-    def sortProbabilitySumDiffrence(self, locateDic, doc):
+    def sortProbabilitySumDiffrence(self, locateDic, doc, map_name):
         for dataStatistic in self.STATISTIC_NAME:
             if self.checkList(locateDic[dataStatistic],doc):
                 continue
@@ -707,8 +1003,10 @@ class Algorithms (object):
                     locateDic[dataStatistic].append(doc)
             else:
                 locateDic[dataStatistic]= sorted(locateDic[dataStatistic], key=lambda x: x[name])
+                self.recordLocateCheckpoint(locateDic[dataStatistic],dataStatistic, map_name)
                 if locateDic[dataStatistic][0][name] > doc[name]:
                     locateDic[dataStatistic][0] = doc
+                    self.recordLocateCheckpoint(locateDic[dataStatistic],dataStatistic, map_name)
 
 ###############################################################################
     """set of methods for debugging locating algorithm"""
@@ -1003,7 +1301,7 @@ class Algorithms (object):
 
 
 def main():
-    if len(sys.argv) != 8:
+    if len(sys.argv) != 9:
         sys.exit('Wrong number argument length : %s' % len(sys.argv))
     collName = sys.argv[1]
     collNameLocate = sys.argv[2]
@@ -1012,7 +1310,8 @@ def main():
     algorithmDistance = int(sys.argv[5])
     algorithmChoosePoints = int(sys.argv[6])
     mode = sys.argv[7]
-    Algorithms(collName, collNameLocate, checkPointFile, numberOfNeighbours, algorithmDistance, algorithmChoosePoints, mode).startLocate()
+    listChangeDiffPercent = float(sys.argv[8])
+    Algorithms(collName, collNameLocate, checkPointFile, numberOfNeighbours, algorithmDistance, algorithmChoosePoints, mode, listChangeDiffPercent).startLocate()
 
 
 if __name__ == '__main__':
