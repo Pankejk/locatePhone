@@ -33,7 +33,7 @@ class Algorithms (object):
         "PERCENTILE - 70",  "PERCENTILE - 90"]
         self.ALGORITHM_DISTANCE_NAME = ['STATISTICS', 'PROBABILITY']
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_']
-        self.STANDARD_DEVIATION_RSSI = 6
+        self.STANDARD_DEVIATION_RSSI = 5
         self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_' + os.path.basename(__file__).split('.')[0]
         self.map = ['RSSI','MAGNETIC']
         
@@ -360,6 +360,7 @@ class Algorithms (object):
         return anwser
     
     """method chooses the best list of neighbours points for certain dataStatistic"""
+    """SPRAWDZIC CZY BLAD JAKI MZNA POELNIC DOBRZE DZIALA W PRAWDOPODOBIENSTWIE"""
     def chooseTheBestList(self):
         bestListDict = {}
         bestListDict['RSSI'] = {}

@@ -2,6 +2,7 @@
 
 from pymongo import MongoClient
 import sys
+import os
 import operator
 
 import time
@@ -33,8 +34,9 @@ class Algorithms (object):
         self.ALGORITHM_DISTANCE_NAME = ['STATISTICS', 'PROBABILITY']
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_']
         self.STANDARD_DEVIATION_RSSI = 5
-        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + os.path.basename(__file__).split('.')[0]
-
+        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_' +os.path.basename(__file__).split('.')[0]
+        self.GOOD_AP_LIST = ['f8:d1:11:48:9b:26', '68:7f:74:09:f6:8b', '28:80:23:28:7e:82', '28:80:23:28:7f:f0', '28:80:23:28:8a:1', '28:80:23:28:8a:b2', '14:cc:20:d1:51:04']
+        
         self.x_distinct = None
         self.y_distinct = None
         self.checkPoints = {}
@@ -357,7 +359,7 @@ class Algorithms (object):
     def countLocationAndError(self):
         resultDic = {}
         self.resultDictonary(resultDic)
-        for dataStatistic in self.STATISTIC_NAME[0:1]:
+        for dataStatistic in self.STATISTIC_NAME:
 
             '''locating and counting error by RSSI map '''
             tmpListAp = resultDic['RSSI']['CHOSEN_POINTS'][dataStatistic]
@@ -407,12 +409,19 @@ class Algorithms (object):
 
         '''get rssi, magnetic fingerprintmap and all data for certain checkpoint'''
         magneticFingerprintDocs = self.collFingerprint.find({'MAGNETIC_DATA': {'$exists' : True}})
-        rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
+        #rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
         magneticLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'MAGNETIC_DATA': {'$exists' : True}})
         rssiLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'RSSI_DATA': {'$exists' : True}})
 
         '''parse cursor data to python dictonary'''
         magneticFingerprintDocs = [res for res in magneticFingerprintDocs]
+        rssiFingerprintDocs = []
+        for mac in self.GOOD_AP_LIST:
+            cursor = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}, 'MAC_AP': mac})
+            tmp = [res for res in cursor]
+            for doc in tmp:
+                rssiFingerprintDocs.append(doc)
+        
         rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
         magneticLocateDocs = [res for res in magneticLocateDocs]
         rssiLocateDocs = [res for res in rssiLocateDocs]
@@ -498,110 +507,49 @@ class Algorithms (object):
                 if anws == 'n':
                     counter = 0
                     print 'RSSI'
-                    for dataStatistic in self.STATISTIC_NAME[0:1]:
-                        name = 'SUM_DIFF_' + dataStatistic
-                        while(len(self.locateCheckpoint['RSSI'][dataStatistic]) < self.numberOfNeighbours):
-                            bestRp = self.sumDiff['RSSI'][0]
-                            counter = 0
-                            for doc in self.sumDiff['RSSI']:
-                                counter += 1
-                                print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
-                                print bestRp[name]
-                                print doc[name]
-                                if bestRp[name] > doc[name]:
-                                    print self.checkList(self.locateCheckpoint['RSSI'][dataStatistic], doc)
-                                    if not self.checkList(self.locateCheckpoint['RSSI'][dataStatistic], doc):
-                                        bestRp = doc
-                                        self.showPointOnMapRunning(bestRp,'RSSI')
-                            self.locateCheckpoint['RSSI'][dataStatistic].append(bestRp)
-                            self.showPointsOnMapRunning(self.locateCheckpoint['RSSI'][dataStatistic],'RSSI')
+                    for doc in self.sumDiff['RSSI']:
+                        print 'X: ' + str(doc['X_FINGERPRINT'])
+                        print 'Y: ' + str(doc['Y_FINGERPRINT'])
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
+                        counter += 1
+                        print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
+                        self.showPointsOnMap(self.locateCheckpoint['RSSI'],'RSSI')
                 elif anws == 'y':
-                    for dataStatistic in self.STATISTIC_NAME:
-                        name = 'SUM_DIFF_' + dataStatistic
-                        while(len(self.locateCheckpoint['RSSI'][dataStatistic]) < self.numberOfNeighbours):
-                            bestRp = self.sumDiff['RSSI'][0]
-                            for doc in self.sumDiff['RSSI']:
-                                if bestRp[name] > doc[name]:
-                                    if not self.checkList(self.locateCheckpoint['RSSI'][dataStatistic], doc):
-                                        bestRp = doc
-                            self.locateCheckpoint['RSSI'][dataStatistic].append(bestRp)
+                    '''choosing points on rssi map '''
+                    for doc in self.sumDiff['RSSI']:
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
                 anws = raw_input('skip this magnetic?(y/n)')
                 if anws == 'n':
                     '''choosing points on magnetic map '''
                     counter = 0
                     print 'MAGNETIC'
-                    for dataStatistic in self.STATISTIC_NAME[0:1]:
-                        name = 'SUM_DIFF_' + dataStatistic
-                        while(len(self.locateCheckpoint['MAGNETIC'][dataStatistic]) < self.numberOfNeighbours):
-                            bestRp = self.sumDiff['MAGNETIC'][0]
-                            counter = 0
-                            for doc in self.sumDiff['MAGNETIC']:
-                                counter += 1
-                                print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
-                                print bestRp[name]
-                                print doc[name]
-                                if bestRp[name] > doc[name]:
-                                    print self.checkList(self.locateCheckpoint['MAGNETIC'][dataStatistic], doc)
-                                    if not self.checkList(self.locateCheckpoint['MAGNETIC'][dataStatistic], doc):
-                                        bestRp = doc
-                                        self.showPointOnMapRunning(bestRp,'MAGNETIC')
-                            self.locateCheckpoint['MAGNETIC'][dataStatistic].append(bestRp)
-                            self.showPointsOnMapRunning(self.locateCheckpoint['MAGNETIC'][dataStatistic],'MAGNETIC')
-                    for dataStatistic in self.STATISTIC_NAME:
-                        name = 'SUM_DIFF_' + dataStatistic
-                        while(len(self.locateCheckpoint['MAGNETIC'][dataStatistic]) < self.numberOfNeighbours):
-                            bestRp = self.sumDiff['MAGNETIC'][0]
-                            for doc in self.sumDiff['MAGNETIC']:
-                                if bestRp[name] > doc[name]:
-                                    if not self.checkList(self.locateCheckpoint['MAGNETIC'][dataStatistic], doc):
-                                        bestRp = doc
-                            self.locateCheckpoint['MAGNETIC'][dataStatistic].append(bestRp)
+                    for doc in self.sumDiff['MAGNETIC']:
+                        print 'X: ' + str(doc['X_FINGERPRINT'])
+                        print 'Y: ' + str(doc['Y_FINGERPRINT'])
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
+                        counter += 1
+                        print 'PROGRESS: ' + str(counter) + '/' + str(len(self.x_distinct)*len(self.y_distinct))
+                        self.showPointsOnMap(self.locateCheckpoint['MAGNETIC'],'MAGNETIC')
+                elif anws == 'y':
+                    '''choosing points on magnetic map '''
+                    for doc in self.sumDiff['MAGNETIC']:
+                        self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
             elif anws == 'y':
                 '''choosing points on rssi map '''
-                for dataStatistic in self.STATISTIC_NAME:
-                    name = 'SUM_DIFF_' + dataStatistic
-                    while(len(self.locateCheckpoint['RSSI'][dataStatistic]) < self.numberOfNeighbours):
-                        bestRp = self.sumDiff['RSSI'][0]
-                        for doc in self.sumDiff['RSSI']:
-                            if bestRp[name] > doc[name]:
-                                if not self.checkList(self.locateCheckpoint['RSSI'][dataStatistic], doc):
-                                    bestRp = doc
-                        self.locateCheckpoint['RSSI'][dataStatistic].append(bestRp)
+                for doc in self.sumDiff['RSSI']:
+                    self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
 
                 '''choosing points on magnetic map '''
-                for dataStatistic in self.STATISTIC_NAME:
-                    name = 'SUM_DIFF_' + dataStatistic
-                    while(len(self.locateCheckpoint['MAGNETIC'][dataStatistic]) < self.numberOfNeighbours):
-                        bestRp = self.sumDiff['MAGNETIC'][0]
-                        for doc in self.sumDiff['MAGNETIC']:
-                            if bestRp[name] > doc[name]:
-                                if not self.checkList(self.locateCheckpoint['MAGNETIC'][dataStatistic], doc):
-                                    bestRp = doc
-                        self.locateCheckpoint['MAGNETIC'][dataStatistic].append(bestRp)
+                for doc in self.sumDiff['MAGNETIC']:
+                    self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
         elif self.mode == 'DEPLOY':
             '''choosing points on rssi map '''
-            for dataStatistic in self.STATISTIC_NAME:
-                name = 'SUM_DIFF_' + dataStatistic
-                while(len(self.locateCheckpoint['RSSI'][dataStatistic]) < self.numberOfNeighbours):
-                    bestRp = self.sumDiff['RSSI'][0]
-                    for doc in self.sumDiff['RSSI']:
-                        if bestRp[name] > doc[name]:
-                            if not self.checkList(self.locateCheckpoint['RSSI'][dataStatistic], doc):
-                                bestRp = doc
-                    self.locateCheckpoint['RSSI'][dataStatistic].append(bestRp)
-                                
-#self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'][dataStatistic],doc)
+            for doc in self.sumDiff['RSSI']:
+                self.sortStatisticsSumDiffrence(self.locateCheckpoint['RSSI'],doc)
 
             '''choosing points on magnetic map '''
-            for dataStatistic in self.STATISTIC_NAME:
-                name = 'SUM_DIFF_' + dataStatistic
-                while(len(self.locateCheckpoint['MAGNETIC'][dataStatistic]) < self.numberOfNeighbours):
-                    bestRp = self.sumDiff['MAGNETIC'][0]
-                    for doc in self.sumDiff['MAGNETIC']:
-                        if bestRp[name] > doc[name]:
-                            if not self.checkList(self.locateCheckpoint['MAGNETIC'][dataStatistic], doc):
-                                bestRp = doc
-                    self.locateCheckpoint['MAGNETIC'][dataStatistic].append(bestRp)
+            for doc in self.sumDiff['MAGNETIC']:
+                self.sortStatisticsSumDiffrence(self.locateCheckpoint['MAGNETIC'],doc)
 
     '''method chooses position with the smallest diffrence on map and put it to
     list accordingly to statistic data '''
@@ -624,13 +572,19 @@ class Algorithms (object):
     def probabilityDiffrence(self):
         '''get rssi, magnetic fingerprintmap and all data for certain checkpoint'''
         magneticFingerprintDocs = self.collFingerprint.find({'MAGNETIC_DATA': {'$exists' : True}})
-        rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
+        #rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
         magneticLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'MAGNETIC_DATA': {'$exists' : True}})
         rssiLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'RSSI_DATA': {'$exists' : True}})
 
         '''parse cursor data to python dictonary'''
         magneticFingerprintDocs = [res for res in magneticFingerprintDocs]
-        rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
+        rssiFingerprintDocs = []
+        for mac in self.GOOD_AP_LIST:
+            cursor = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}, 'MAC_AP': mac})
+            tmp = [res for res in cursor]
+            for doc in tmp:
+                rssiFingerprintDocs.append(doc)
+        #rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
         magneticLocateDocs = [res for res in magneticLocateDocs]
         rssiLocateDocs = [res for res in rssiLocateDocs]
 
@@ -952,80 +906,13 @@ class Algorithms (object):
             if anws == 'n':
                 break
 
-    """method shows point chosen while algortihm is running"""
-    def showPointsOnMapRunning(self,tList, map_name):
-        while(True):
-
-            dataDict = {}
-            dataDict['X'] = []
-            dataDict['Y'] = []
-            dataDict['COLOUR'] = []
-            for point in tList:
-                dataDict['X'].append(point['X_FINGERPRINT'])
-                dataDict['Y'].append(point['Y_FINGERPRINT'])
-                dataDict['COLOUR'].append(0)
-                tmpList = [point['X_FINGERPRINT'],point['Y_FINGERPRINT']]
-                tmpTuple = tuple(tmpList)
-                plt.annotate('RP',xy=tmpTuple)
-
-
-            dataDict['X'].append(float(self.checkPoints[self.currentCheckpoint]['X']))
-            dataDict['Y'].append(float(self.checkPoints[self.currentCheckpoint]['Y']))
-            dataDict['COLOUR'].append(100)
-            tmpList = [float(self.checkPoints[self.currentCheckpoint]['X']), float(self.checkPoints[self.currentCheckpoint]['Y'])]
-            tmpTuple = tuple(tmpList)
-            plt.annotate('CP',xy=tmpTuple)
-
-            plt.scatter(dataDict['X'], dataDict['Y'],c=dataDict['COLOUR'])
-            plt.xlim(0,max(self.x_distinct))
-            plt.ylim(0,max(self.y_distinct))
-            plt.xlabel('width [m]')
-            plt.ylabel('height [m]')
-            plt.title(map_name)
-            plt.show()
-            anws = raw_input('next(n)')
-            if anws == 'n':
-                break
-    """methos whos single point during choosing points on map"""
-    def showPointOnMapRunning(self, point,map_name):
-        while(True):
-
-            dataDict = {}
-            dataDict['X'] = []
-            dataDict['Y'] = []
-            dataDict['COLOUR'] = []
-            
-            dataDict['X'].append(point['X_FINGERPRINT'])
-            dataDict['Y'].append(point['Y_FINGERPRINT'])
-            dataDict['COLOUR'].append(0)
-            tmpList = [point['X_FINGERPRINT'],point['Y_FINGERPRINT']]
-            tmpTuple = tuple(tmpList)
-            plt.annotate('RP',xy=tmpTuple)
-
-
-            dataDict['X'].append(float(self.checkPoints[self.currentCheckpoint]['X']))
-            dataDict['Y'].append(float(self.checkPoints[self.currentCheckpoint]['Y']))
-            dataDict['COLOUR'].append(100)
-            tmpList = [float(self.checkPoints[self.currentCheckpoint]['X']), float(self.checkPoints[self.currentCheckpoint]['Y'])]
-            tmpTuple = tuple(tmpList)
-            plt.annotate('CP',xy=tmpTuple)
-
-            plt.scatter(dataDict['X'], dataDict['Y'],c=dataDict['COLOUR'])
-            plt.xlim(0,max(self.x_distinct))
-            plt.ylim(0,max(self.y_distinct))
-            plt.xlabel('width [m]')
-            plt.ylabel('height [m]')
-            plt.title(map_name)
-            plt.show()
-            anws = raw_input('next(n)')
-            if anws == 'n':
-                break
 ###############################################################################
     """method for counting avrage time for locating checkpoint"""
 
     def resetTimeVariables(self):
         self.startTime = 0
         self.stopTime = 0
+
     def startCountingTime(self):
         self.startTime = time.time()
 
