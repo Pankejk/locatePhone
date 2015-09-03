@@ -627,7 +627,7 @@ class Algorithms (object):
                     statisticsLocate = docLocate['STATISTICS']
                     statisticsFingerprint = docFingerprint['STATISTICS']
                     for dataStatistic in self.STATISTIC_NAME:
-                        tmpDiff = scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION'])
+                        tmpDiff = abs(scipy.stats.norm.cdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION']) - scipy.stats.norm.cdf((statisticsLocate[dataStatistic] - 1),statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION']))
                         #print tmpDiff
                         #raw_input()
                         diff[dataStatistic] = tmpDiff
@@ -645,7 +645,7 @@ class Algorithms (object):
                 statisticsLocate = docLocate['STATISTICS_NORM']
                 statisticsFingerprint = docFingerprint['STATISTICS_NORM']
                 for dataStatistic in self.STATISTIC_NAME:
-                    tmpDiff = scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION'])
+                    tmpDiff = abs(scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION']) - scipy.stats.norm.cdf((statisticsLocate[dataStatistic] - 1),statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION']))
                     #print tmpDiff
                     #raw_input()
                     diff[dataStatistic] = tmpDiff
