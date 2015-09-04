@@ -33,6 +33,7 @@ class DrawFingerprint(object):
         self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE",
         "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50",
         "PERCENTILE - 70",  "PERCENTILE - 90"]
+        self.map_name = ['MAGNETIC', 'RSSI']
 
         self.menu()
 
@@ -198,7 +199,200 @@ class DrawFingerprint(object):
         plt.yticks(np.arange(0,len(self.y_distinct)),y)
         plt.xticks(np.arange(0,len(self.x_distinct)),x)
         plt.show()
+        
+###############################################################################
+    def drawHistogramWholeMapMagnetic(self):
+        
+        cursor = self.coll.find({'MAGNETIC_DATA' : {'$exists': True}})
+        docs = [res for res in cursor]
+        
+        valueList = []
+        for doc in docs:
+            for value in doc['MAGNETIC_DATA_NORM']:
+                valueList.append(value)
+        
+        valueList = np.asarray(valueList)
+        plt.hist(valueList, histtype='stepfilled')
+        plt.title("Histogram - whole map magnetic")
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        #plt.ylim(0,5)
+        plt.show()
+        
+    def drawHistogramWholeMapRssi(self):
+        macIndex = int(raw_input('''%s\nChoose mac address(0-%s)''' % (str(self.mac_ap_distinct),len(self.mac_ap_distinct) - 1)))
 
+        mac = self.mac_ap_distinct[macIndex]
+        
+        cursor = self.coll.find({'RSSI_DATA' : {'$exists': True}, 'MAC_AP': mac})
+        docs = [res for res in cursor]
+        
+        valueList = []
+        for doc in docs:
+            for value in doc['RSSI_DATA']:
+                valueList.append(value)
+        
+        valueList = np.asarray(valueList)
+        plt.hist(valueList, histtype='stepfilled')
+        plt.title("Histogram - whole map RSSI")
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        #plt.ylim(0,5)
+        plt.show()
+        
+    def drawCumuLativeDistributionWholeMapMagnetic(self):
+        
+        cursor = self.coll.find({'MAGNETIC_DATA' : {'$exists': True}})
+        docs = [res for res in cursor]
+        
+        valueList = []
+        for doc in docs:
+            for value in doc['MAGNETIC_DATA_NORM']:
+                valueList.append(value)
+        
+        #valueList = np.asarray(valueList)
+            
+        valueList=np.sort( valueList )
+        yvals=np.arange(len(valueList))/float(len(valueList))
+        print valueList
+        print yvals
+        plt.plot( valueList, yvals )
+        plt.title("Cumulative distribution - whole map magnetic")
+        plt.xlabel("Value")
+        plt.ylabel("Probability")
+        #plt.ylim(0,5)
+        plt.show()
+            
+            
+            
+    def drawCumuLativeDistributionWholeMapRssi(self):
+        macIndex = int(raw_input('''%s\nChoose mac address(0-%s)''' % (str(self.mac_ap_distinct),len(self.mac_ap_distinct) - 1)))
+        
+        mac = self.mac_ap_distinct[macIndex]
+        
+        cursor = self.coll.find({'RSSI_DATA' : {'$exists': True}, 'MAC_AP': mac})
+        docs = [res for res in cursor]
+        
+        valueList = []
+        for doc in docs:
+            for value in doc['RSSI_DATA']:
+                valueList.append(value)
+        
+        valueList=np.sort( valueList )
+        yvals=np.arange(len(valueList))/float(len(valueList))
+        print valueList
+        print yvals
+        plt.plot( valueList, yvals )
+        plt.title("Cumulative distribution - whole map RSSI")
+        plt.xlabel("Value")
+        plt.ylabel("Probability")
+        #plt.ylim(0,5)
+        plt.show()
+        
+        
+    def drawHistogramPostionsMagnetic(self):
+        postions = raw_input('''X - %s\n Y - %s\n choose postions (x y)''' % (str(self.x_distinct),str(self.y_distinct)))
+        postions = postions.split(' ')
+        postions[0] = int(postions[0])
+        postions[1] = int(postions[1])
+        
+        cursor = self.coll.find({'MAGNETIC_DATA' : {'$exists': True}, 'X': postions[0], 'Y': postions[1]})
+        docs = [res for res in cursor]
+        
+        valueList = []
+        for doc in docs:
+            for value in doc['MAGNETIC_DATA_NORM']:
+                valueList.append(value)
+        
+        valueList = np.asarray(valueList)
+        plt.hist(valueList, histtype='stepfilled')
+        plt.title("Histogram - x= %s,y= %s - magnetic" % (postions[0],postions[1]))
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        plt.ylim(0,5)
+        plt.show()
+        
+        
+    def drawHistogramPositionsRssi(self):
+        macIndex = int(raw_input('''%s\nChoose mac address(0-%s)''' % (str(self.mac_ap_distinct),len(self.mac_ap_distinct) - 1)))
+        postions = raw_input('''X - %s\n Y - %s\n choose postions (x y)''' % (str(self.x_distinct),str(self.y_distinct)))
+        postions = postions.split(' ')
+        postions[0] = int(postions[0])
+        postions[1] = int(postions[1])
+        
+        mac = self.mac_ap_distinct[macIndex]
+        
+        cursor = self.coll.find({'RSSI_DATA' : {'$exists': True}, 'MAC_AP': mac, 'X': postions[0], 'Y': postions[1]})
+        docs = [res for res in cursor]
+        
+        valueList = []
+        for doc in docs:
+            for value in doc['RSSI_DATA']:
+                valueList.append(value)
+        
+        valueList = np.asarray(valueList)
+        plt.hist(valueList, histtype='stepfilled')
+        plt.title("Histogram - x= %s,y= %s - RSSI" % (postions[0],postions[1]))
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        #plt.ylim(0,5)
+        plt.show()
+        
+        
+    def drawCumuLativeDistributionPositionsMagnetic(self):
+        postions = raw_input('''X - %s\n Y - %s\n choose postions (x y)''' % (str(self.x_distinct),str(self.y_distinct)))
+        postions = postions.split(' ')
+        postions[0] = int(postions[0])
+        postions[1] = int(postions[1])
+        
+        cursor = self.coll.find({'MAGNETIC_DATA' : {'$exists': True}, 'X': postions[0], 'Y': postions[1]})
+        docs = [res for res in cursor]
+        
+        valueList = []
+        for doc in docs:
+            for value in doc['MAGNETIC_DATA_NORM']:
+                valueList.append(value)
+        
+        #valueList = np.asarray(valueList)
+            
+        valueList=np.sort( valueList )
+        yvals=np.arange(len(valueList))/float(len(valueList))
+        print valueList
+        print yvals
+        plt.plot( valueList, yvals )
+        plt.title("Cumulative distribution - x= %s,y= %s - magnetic" % (postions[0],postions[1]))
+        plt.xlabel("Value")
+        plt.ylabel("Probability")
+        #plt.ylim(0,5)
+        plt.show()
+        
+    def drawCumuLativeDistributionPositionsRssi(self):
+        macIndex = int(raw_input('''%s\nChoose mac address(0-%s)''' % (str(self.mac_ap_distinct),len(self.mac_ap_distinct) - 1)))
+        postions = raw_input('''X - %s\n Y - %s\n choose postions (x y)''' % (str(self.x_distinct),str(self.y_distinct)))
+        postions = postions.split(' ')
+        postions[0] = int(postions[0])
+        postions[1] = int(postions[1])
+        
+        mac = self.mac_ap_distinct[macIndex]
+        
+        cursor = self.coll.find({'RSSI_DATA' : {'$exists': True}, 'MAC_AP': mac, 'X': postions[0], 'Y': postions[1]})
+        docs = [res for res in cursor]
+        
+        valueList = []
+        for doc in docs:
+            for value in doc['RSSI_DATA']:
+                valueList.append(value)
+        
+        valueList=np.sort( valueList )
+        yvals=np.arange(len(valueList))/float(len(valueList))
+        print valueList
+        print yvals
+        plt.plot( valueList, yvals )
+        plt.title("Cumulative distribution - x= %s,y= %s - RSSI")
+        plt.xlabel("Value")
+        plt.ylabel("Probability")
+        #plt.ylim(0,5)
+        plt.show()
 ###############################################################################
     def menu(self):
 
@@ -209,7 +403,17 @@ class DrawFingerprint(object):
             0 - show magnetic fingerprint
             1 - show rssi fingerprint
             2 - draw heatmap rssi
-            3 - draw heatmap magnetic''')
+            3 - draw heatmap magnetic
+            4 - draw histogram - whole map - rssi
+            5 - draw histogram - whole map - magnetic
+            6 - draw distribution - whole map - rssi
+            7 - draw distribution - whole map - magnetic
+            8 - draw histogram - choose positions - rssi
+            9 - draw histogram - choose positions - magnetic
+            10 - draw distribution - choose positions - rssi
+            11 - draw distribution - choose positions - magnetic
+            12 - test if data fits normal distribution
+            ''')
 
             if anws == 'q':
                 break
@@ -223,10 +427,27 @@ class DrawFingerprint(object):
                 self.drawHeatmapAp(anws)
             elif anws == '3':
                 self.drawHeatmapMagnetic()
+            elif anws == '4':
+                self.drawHistogramWholeMapRssi()
+            elif anws == '5':
+                self.drawHistogramWholeMapMagnetic()
+            elif anws == '6':
+                self.drawCumuLativeDistributionWholeMapRssi()
+            elif anws == '7':
+                self.drawCumuLativeDistributionWholeMapMagnetic()
+            elif anws == '8':
+                self.drawHistogramPositionsRssi()
+            elif anws == '9':
+                self.drawHistogramPostionsMagnetic()
+            elif anws == '10':
+                self.drawCumuLativeDistributionPositionsRssi()
+            elif anws == '11':
+                self.drawCumuLativeDistributionPositionsMagnetic()
+            elif anws == '12':
+                pass
 if __name__ == '__main__':
     if len(sys.argv)  == 2:
         collName = sys.argv[1]
         drawFingerprint = DrawFingerprint(collName)
-        drawFingerprint.menu()
     else:
         sys.exit('NOT GOOD NUMBER OF ARGS')
