@@ -1,389 +1,36 @@
 from pymongo import MongoClient
-import sys
 import os
-
-import scipy.stats
-import numpy as np
 from math import sqrt
+import numpy as np
+import scipy.stats
 
-class CleanData(object):
 
-    def __init__(self,collName):
-        self.collName = collName
+class CleanDataKuznia(object):
+
+    def __init__(self):
 
         self.conn = MongoClient()
-        self.db_fingerprint = self.conn['fingerprint']
-        self.db_locate = self.conn['locate']
-        self.coll_fingerprint = self.db_fingerprint[self.collName]
-        self.coll_locate = self.db_locate[self.collName]
+        db_fingerprint = self.conn['fingerprint']
+        db_locate = self.conn['locate']
+        self.coll_fingerprint = db_fingerprint['kuznia1']
+        self.coll_locate = db_locate['kuznia1']
 
-        '''distinct values'''
         self.x_distinct = self.coll_fingerprint.distinct('X')
         self.y_distinct = self.coll_fingerprint.distinct('Y')
-        self.locationCp_distinct = self.coll_locate.distinct('CHECKPOINT')
-        self.macAp_fingerprint_distinct = self.coll_fingerprint.distinct('MAC_AP')
-        self.macAp_locate_distinct = self.coll_locate.distinct('MAC_AP')
-
-        """static values"""
-        self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE",
+        self.mac_ap_fingerprint_distinct = self.coll_fingerprint.distinct('MAC_AP')
+        self.mac_ap_locate_distinct = self.coll_locate.distinct('MAC_AP')
+        self.checkpoints_distinct = self.coll_locate.distinct('CHECKPOINT')
+        self.STATISTIC_NAME = ["MEAN" , "STANDARD_DEVIATION", "MAX", "MIN", "MEDIANA", "MODE",
         "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50",
         "PERCENTILE - 70",  "PERCENTILE - 90"]
-        self.allDirs = {'algorithms' : 'algorithms/', 'backup_workspace': 'backup_workspace/',
-        'checkpoints': 'checkpoints/', 'clean_data': 'clean_data/',
-        'data-backup': 'data-backup/', 'INSTALL': 'INSTALL/',
-         'sample': 'sample/','server': 'server/', 'tests': 'tests/'}
-        self.project_dir='/home/mike/Desktop/praca_magisterska/workspace/'
 
     def __del__(self):
         self.conn.close()
 
-    """method shows information about data in fingerprint map and in checkpoint data"""
-    def printInfoAboutData(self):
-        print 'DISCTINCT X COORDINATES: ' + str(self.x_distinct) + ' Length: ' + str(len(self.x_distinct))
-        print 'DISCTINCT Y COORDINATES: ' + str(self.y_distinct) + ' Length: ' + str(len(self.y_distinct))
-        print 'DISTINCT CHECKPOINTS: ' + str(self.locationCp_distinct) + ' Length: ' + str(len(self.locationCp_distinct))
-        print 'DISTINCT APs MAC in fingerprint: ' + str(self.macAp_fingerprint_distinct) + ' Length: ' + str(len(self.macAp_fingerprint_distinct))
-        print 'DISTINCT APs MAC in locate: ' + str(self.macAp_locate_distinct) + ' Length: ' + str(len(self.macAp_locate_distinct))
-        print ''
-##############################################################################
-    '''methods that check if necessary is removing doubuled data
-    or some magnetic documents are missing'''
 ###############################################################################
-    '''methods for fingerprint db'''
-
-    ''' method shows missing magnetic documents in fingerprint map'''
-    def isMagneticMissingFingerprint(self):
-        cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}})
-        docs = [res for res in cursor]
-        size = len(self.x_distinct)*len(self.y_distinct)
-        #print self.x_distinct
-        #print self.y_distinct
-        msg = 'Found %s MAGNETIC DOCUMENTS. SHOULD BE: %s' % (len(docs),size)
-        print msg
-
-        counterList = []
-        self.preapreListDictonaryCoordinatesMagneticFingerprint(counterList)
-        for doc in docs:
-            for counterDic in counterList:
-                if doc['X'] == counterDic['X'] and doc['Y'] == counterDic['Y']:
-                    counterDic['COUNTER'] += 1
-        print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
-
-        for dic in counterList:
-            if dic['COUNTER'] == 0:
-                print 'X: ' + str(dic['X']) + ' Y: ' + str(dic['Y']) + 'NUMBER OF DUCUMENTS: ' + str(dic['COUNTER'])
-
-    ''' method shows dubled magnetic documents in fingerprint map'''
-    def isMagneticDoubledFingerprint(self):
-        cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}})
-        docs = [res for res in cursor]
-        print 'Found %s MAGNETIC DOCUMENTS. SHOULD BE: %s' % (len(docs),len(self.x_distinct)*len(self.y_distinct))
-
-        counterList = []
-        self.preapreListDictonaryCoordinatesMagneticFingerprint(counterList)
-        for doc in docs:
-            for counterDic in counterList:
-                if doc['X'] == counterDic['X'] and doc['Y'] == counterDic['Y']:
-                    counterDic['COUNTER'] += 1
-        print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
-
-        counter = 0
-        deleteCoordinates = []
-        for dic in counterList:
-            if dic['COUNTER'] > 1:
-                print 'X: ' + str(dic['X']) + ' Y: ' + str(dic['Y']) + 'NUMBER OF DUCUMENTS: ' + str(dic['COUNTER'])
-                deleteCoordinates.append(dic)
-                counter += 1
-
-        anws = raw_input('Found %s dubled magnetic documents. Do you want to delete unnecessary documents from positons?(y/n)' % counter)
-
-        if anws == 'y':
-            for dic in deleteCoordinates:
-                cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}, 'X': dic['X'], 'Y': dic['Y']})
-                docs = [res for res in cursor]
-                for doc in docs[1:]:
-                    self.coll_fingerprint.delete_one({'_id': doc['_id']})
-        elif anws == 'n':
-            pass
-
-
-    ''' method shows dubled RSSI documents in fingerprint map'''
-    def isRssiDoubledFingerprint(self):
-
-        counterList = []
-        self.preapreListDictonaryCoordinatesRssiFingerprint(counterList)
-        cursor = self.coll_fingerprint.find({'RSSI_DATA': {'$exists': True}})
-        docs = [res for res in cursor]
-        for doc in docs:
-            for dic in counterList:
-                if dic['MAC_AP'] == doc['MAC_AP'] and dic['X'] == doc['X'] and dic['Y'] == doc['Y']:
-                    dic['COUNTER'] += 1
-
-        print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
-
-        counter = 0
-        deleteCoordinates = []
-        for dic in counterList:
-            if dic['COUNTER'] > 1:
-                print 'MAC_AP: ' + dic['MAC_AP'] + ' X: ' + str(dic['X']) + ' Y: ' + str(dic['Y']) + 'NUMBER OF DUCUMENTS: ' + str(dic['COUNTER'])
-                deleteCoordinates.append(dic)
-                counter += 1
-        anws = raw_input('Found %s dubled rssi documents. Do you want to delete unnecessary documents from positons?(y/n)' % counter)
-
-        if anws == 'y':
-            for dic in deleteCoordinates:
-                cursor = self.coll_fingerprint.find({'RSSI_DATA': {'$exists': True}, 'MAC_AP': dic['MAC_AP'], 'X': dic['X'], 'Y': dic['Y']})
-                docs = [res for res in cursor]
-                for doc in docs[1:]:
-                    self.coll_fingerprint.delete_one({'_id': doc['_id']})
-        elif anws == 'n':
-            pass
-
-    """method counts data in every document and repair them if required"""
-    def countDataEveryDocumentFingerprint(self):
-        data_size = int(raw_input('What data size should be? '))
-        cursor = self.coll_fingerprint.find({})
-        docs = [res for res in cursor]
-
-        docChangeSize = []
-        for doc in docs:
-            if 'MAGNETIC_DATA' in doc.viewkeys():
-                if len(doc['MAGNETIC_DATA']) > 3 * data_size:
-                    print 'X: ' + str(doc['X']) + ' Y: ' + str(doc['Y'])
-                    + ' MAGNETIC_DATA_SIZE: ' + str(len(doc['MAGNETIC_DATA']))
-                    docChangeSize.append(doc)
-            elif 'RSSI_DATA' in doc.viewkeys():
-                if len(doc['RSSI_DATA']) > data_size:
-                    print 'X: ' + str(doc['X']) + ' Y: ' + str(doc['Y'])+' RSSI_DATA_SIZE: ' + str(len(doc['RSSI_DATA']))
-                    docChangeSize.append(doc)
-        anws = raw_input('''Found %s documents with data size biger then %s.
-         Do you want to change size of data?''' %(len(docChangeSize),data_size))
-
-        if anws == 'y':
-            print ('NUMBER OF DOCUMENTS BEFORE CHANGING DATA SIZE: '
-            + str(self.coll_fingerprint.count()))
-            for doc in docChangeSize:
-                if 'MAGNETIC_DATA' in doc.viewkeys():
-                    tmpL = doc['MAGNETIC_DATA']
-                    doc['MAGNETIC_DATA'] = tmpL[0:3*data_size]
-                    statisticsDictonary = self.countStatistics(doc['MAGNETIC_DATA'])
-                    doc['STATISTICS'] = statisticsDictonary
-                    norm = self.countsNorm(doc['MAGNETIC_DATA'])
-                    doc['MAGNETIC_DATA_NORM'] = norm
-                    statisticsDictonary = self.countStatistics(doc['MAGNETIC_DATA_NORM'])
-                    doc['STATISTICS_NORM'] = statisticsDictonary
-                elif 'RSSI_DATA' in doc.viewkeys():
-                    tmpL = doc['RSSI_DATA']
-                    doc['MAGNETIC_DATA'] = tmpL[0:data_size]
-                    statisticsDictonary = self.countStatistics(doc['RSSI_DATA'])
-                    doc['STATISTICS'] = statisticsDictonary
-                self.coll_fingerprint.save(doc)
-            print 'NUMBER OF DOCUMENTS AFTER CHANGING DATA SIZE: ' + str(self.coll_fingerprint.count())
-        elif anws == 'n':
-            pass
-
-    """method shows number of dcoument per coordinate"""
-    def showNumberOfDcumentsOnCoordinates(self):
-        counterDic = []
-        self.preapreListDictonaryCoordinatesMagneticFingerprint(counterDic)
-
-        cursor = self.coll_fingerprint.find({})
-        docs = [res for res in cursor]
-
-        for doc in docs:
-            for dic in counterDic:
-                if doc['X'] == dic['X'] and doc['Y'] == dic['Y']:
-                    dic['COUNTER'] += 1
-        for dic in counterDic:
-            print ('X: ' + str(dic['X']) + ' Y: ' + str(dic['Y'])
-            + ' Number of documents: ' + str(dic['COUNTER']))
-
-###############################################################################
-    '''methods for locate db '''
-
-    ''' method shows missing magnetic documents in fingerprint map'''
-    def isMagneticMissingLocate(self):
-
-        counterList = []
-        self.preapreListDictonaryCoordinatesMagneticLocate(counterList)
-        for cp in self.locationCp_distinct:
-            cursor = self.coll_locate.find({'MAGNETIC_DATA': {'$exists': True},'CHECKPOINT': cp})
-            docs = [res for res in cursor]
-            msg = 'For checkpoint: %s found %s MAGNETIC DOCUMENTS. SHOULD BE: %s' % (cp,len(docs),1)
-            print msg
-            for doc in docs:
-                for counterDic in counterList:
-                    if doc['CHECKPOINT'] == counterDic['CHECKPOINT']:
-                        counterDic['COUNTER'] += 1
-
-        for dic in counterList:
-            if dic['COUNTER'] == 0:
-                print 'CHECKPOINT MISSING MAGNETIC: ' + dic['CHECKPOINT'] + ' NUMBER OF DUCUMENTS: ' + str(dic['COUNTER'])
-
-    ''' method shows dubled magnetic documents in fingerprint map'''
-    def isMagneticDoubledLocate(self):
-        counterList = []
-        self.preapreListDictonaryCoordinatesMagneticLocate(counterList)
-
-        cursor = self.coll_locate.find({'MAGNETIC_DATA': {'$exists': True}})
-        docs = [res for res in cursor]
-        for doc in docs:
-            for counterDic in counterList:
-                if doc['CHECKPOINT'] == counterDic['CHECKPOINT']:
-                    counterDic['COUNTER'] += 1
-        print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
-
-        counter = 0
-        deleteCoordinates = []
-        for dic in counterList:
-            if dic['COUNTER'] > 1:
-                print 'For checkpoint:' + dic['CHECKPOINT'] +  ' found duplicated documents: ' + str(dic['COUNTER'])
-                deleteCoordinates.append(dic)
-                counter += 1
-
-        anws = raw_input('Found %s dubled magnetic documents in locate. Do you want to delete unnecessary documents from checkpoints?(y/n)' % counter)
-
-        if anws == 'y':
-            for dic in deleteCoordinates:
-                cursor = self.coll_locate.find({'MAGNETIC_DATA': {'$exists': True}, 'CHECKPOINT': dic['CHECKPOINT']})
-                docs = [res for res in cursor]
-                for doc in docs[1:]:
-                    self.coll_locate.delete_one({'_id': doc['_id']})
-        elif anws == 'n':
-            pass
-
-    ''' method shows dubled RSSI documents in fingerprint map'''
-    def isRssiDoubledLocate(self):
-
-        counterList = []
-        self.preapreListDictonaryCoordinatesRssiLocate(counterList)
-        cursor = self.coll_locate.find({'RSSI_DATA': {'$exists': True}})
-        docs = [res for res in cursor]
-        for doc in docs:
-            for dic in counterList:
-                if dic['MAC_AP'] == doc['MAC_AP'] and dic['CHECKPOINT'] == doc['CHECKPOINT']:
-                    dic['COUNTER'] += 1
-
-        print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
-
-        counter = 0
-        deleteCoordinates = []
-        for dic in counterList:
-            if dic['COUNTER'] > 1:
-                print 'CHECKPOINT: ' + dic['CHECKPOINT'] + 'MAC_AP: ' + dic['MAC_AP'] + ' DUBLED NUMBER OF DUCUMENTS: ' + str(dic['COUNTER'])
-                deleteCoordinates.append(dic)
-                counter += 1
-
-        anws = raw_input('Found %s dubled RSSI documents in locate. Do you want to delete unnecessary documents from checkpoints?(y/n)' % counter)
-
-        if anws == 'y':
-            for dic in deleteCoordinates:
-                cursor = self.coll_locate.find({'MAC_AP': dic['MAC_AP'], 'CHECKPOINT': dic['CHECKPOINT']})
-                docs = [res for res in cursor]
-                for doc in docs[1:]:
-                    self.coll_locate.delete_one({'_id': doc['_id']})
-        elif anws == 'n':
-            pass
-
-    """method counts data in every document and repair them if required"""
-    def countDataEveryDocumentLocate(self):
-        data_size = int(raw_input('What data size should be? '))
-        cursor = self.coll_locate.find({})
-        docs = [res for res in cursor]
-
-        docChangeSize = []
-        for doc in docs:
-            if 'MAGNETIC_DATA' in doc.viewkeys():
-                if len(doc['MAGNETIC_DATA']) > 3 * data_size:
-                    print ('CHECKPOINT: ' + doc['CHECKPOINT']
-                    + ' MAGNETIC_DATA_SIZE: ' + str(len(doc['MAGNETIC_DATA'])))
-                    docChangeSize.append(doc)
-            elif 'RSSI_DATA' in doc.viewkeys():
-                if len(doc['RSSI_DATA']) > data_size:
-                    print ('CHECKPOINT: ' + doc['CHECKPOINT']
-                    + ' MAC_AP: ' + doc['MAC_AP']
-                    +' RSSI_DATA_SIZE: ' + str(len(doc['RSSI_DATA'])))
-                    docChangeSize.append(doc)
-        anws = raw_input('''Found %s documents with data size biger then %s.
-         Do you want to change size of data?''' %(len(docChangeSize),data_size))
-
-        if anws == 'y':
-            print ('NUMBER OF DOCUMENTS BEFORE CHANGING DATA SIZE: '
-            + str(self.coll_locate.count()))
-            for doc in docChangeSize:
-                if 'MAGNETIC_DATA' in doc.viewkeys():
-                    tmpL = doc['MAGNETIC_DATA']
-                    doc['MAGNETIC_DATA'] = tmpL[0:3*data_size]
-                    statisticsDictonary = self.countStatistics(doc['MAGNETIC_DATA'])
-                    doc['STATISTICS'] = statisticsDictonary
-                    norm = self.countsNorm(doc['MAGNETIC_DATA'])
-                    doc['MAGNETIC_DATA_NORM'] = norm
-                    statisticsDictonary = self.countStatistics(doc['MAGNETIC_DATA_NORM'])
-                    doc['STATISTICS_NORM'] = statisticsDictonary
-                elif 'RSSI_DATA' in doc.viewkeys():
-                    tmpL = doc['RSSI_DATA']
-                    doc['MAGNETIC_DATA'] = tmpL[0:data_size]
-                    statisticsDictonary = self.countStatistics(doc['RSSI_DATA'])
-                    doc['STATISTICS'] = statisticsDictonary
-                self.coll_locate.save(doc)
-            print 'NUMBER OF DOCUMENTS AFTER CHANGING DATA SIZE: ' + str(self.coll_locate.count())
-        elif anws == 'n':
-            pass
-
-    """method shows number of documents per coordinate"""
-    def numberOfDocumnentsPerCheckpoint(self):
-        counterDic = []
-        self.preapreListDictonaryCoordinatesMagneticLocate(counterDic)
-
-        cursor = self.coll_locate.find({})
-        docs = [res for res in cursor]
-
-        for doc in docs:
-            for dic in counterDic:
-                if (doc['CHECKPOINT'] == dic['CHECKPOINT']):
-                    dic['COUNTER'] += 1
-        for dic in counterDic:
-            print ('CHECKPOINT: ' + dic['CHECKPOINT']
-            + ' Number of documents: ' + str(dic['COUNTER']))
-
-    """methods read given file and compare checkpoint in locate database"""
-    def comapreLocateColectionWithFile(self):
-        dir_name = self.project_dir + self.allDirs['checkpoints']
-        checkpoints = []
-
-        dirList = os.listdir(dir_name)
-        anws = int(raw_input('%s\nChoose file with checkpoints(0-%s) ' % (str(dirList), len(dirList)-1)))
-
-        with open(dir_name + dirList[anws],'r') as fd:
-            lines = fd.readlines()
-
-        for line in lines:
-            line = line.replace('\n','')
-            tmp = line.split(' ')
-            checkpoints.append(tmp[0])
-
-        distinctLocateCheckpoints = self.coll_locate.distinct('CHECKPOINT')
-
-        missingCheckpoints = []
-        if len(distinctLocateCheckpoints) != len(checkpoints):
-            for checkpointLocate in distinctLocateCheckpoints:
-                if  not checkpointLocate in checkpoints:
-                    missingCheckpoints.append(checkpointLocate)
-        anws = raw_input('%s\nThese checkpoints are not present in file: %s. Do you want to delete them from collection?(y/n) ' % (str(missingCheckpoints), dirList[anws]))
-        if anws == 'y':
-            print 'NUMBER OF DOCUMENTS BEFORE REMOVING CHECKPOINT FROM COLLECTION %s : %s' %  (self.collName, self.coll_locate.count())
-            for missingCheckpoint in missingCheckpoints:
-                cursor = self.coll_locate.find({'CHECKPOINT': missingCheckpoint})
-                docs = [res for res in cursor]
-
-                for doc in docs:
-                    self.coll_locate.remove({'_id': doc['_id']})
-            print 'NUMBER OF DOCUMENTS AFTER REMOVING CHECKPOINT FROM COLLECTION %s : %s' %  (self.collName, self.coll_locate.count())
-        elif anws == 'n':
-            pass
-################################################################################
-    """method count statistics for given list"""
-    def countStatistics(self,tList):
+    """methods which are usefull for the rest of function"""
+    def countStatisticsData(self, tList):
+        array = np.array(tList)
         meanV = np.mean(tList)
         standardDeviation = np.std(tList)
         maxV = max(tList)
@@ -391,28 +38,19 @@ class CleanData(object):
         medianaV = np.median(tList)
         tmp = list(scipy.stats.mode(tList))
         modeV = tmp[0].tolist()[0]
-        array = np.array(tList)
+
         percentile10 = np.percentile(array, 10)
         percentile20 = np.percentile(array, 20)
         percentile50 = np.percentile(array, 50)
         percentile70 = np.percentile(array, 70)
         percentile90 = np.percentile(array, 90)
         statisticsDict = {"MEAN" : meanV,"STANDARD_DEVIATION" : standardDeviation,
-         "MAX" : maxV, "MIN" : minV, "MEDIANA" : medianaV, "MODE" : modeV,
-         "PERCENTILE - 10" : percentile10,"PERCENTILE - 20" : percentile20,
-         "PERCENTILE - 50" : percentile50,  "PERCENTILE - 70" : percentile70,
-         "PERCENTILE - 90" : percentile90 }
-        return statisticsDict
+        "MAX" : maxV, "MIN" : minV, "MEDIANA" : medianaV, "MODE" : modeV,
+        "PERCENTILE - 10" : percentile10,"PERCENTILE - 20" : percentile20,
+        "PERCENTILE - 50" : percentile50,  "PERCENTILE - 70" : percentile70,
+        "PERCENTILE - 90" : percentile90 }
 
-    """method counts norm for given data"""
-    def countsNorm(self, tList):
-        norm = []
-        for i in range(0,len(tList),3):
-            norm.append(sqrt(pow(tList[i],2) + pow(tList[i+1],2)
-            + pow(tList[i+2],2)))
-        return norm
-################################################################################
-    ''' preparing list for fingerprint db'''
+        return statisticsDict
 
     '''method which prepares list of dict coordiantes - magnetic'''
     def preapreListDictonaryCoordinatesMagneticFingerprint(self,tList):
@@ -424,87 +62,236 @@ class CleanData(object):
                 tmp['COUNTER'] = 0
                 tList.append(tmp)
 
-    '''method which prepares list of dict coordiantes - RSSI'''
-    def preapreListDictonaryCoordinatesRssiFingerprint(self, counterList):
-        for mac in self.macAp_fingerprint_distinct:
-            for x in self.x_distinct:
-                for y in self.y_distinct:
-                    tmp = {}
-                    tmp['MAC_AP'] = mac
-                    tmp['X'] = x
-                    tmp['Y'] = y
-                    tmp['COUNTER'] = 0
-                    counterList.append(tmp)
-###############################################################################
-    ''' preparing lists for locate db'''
-###############################################################################
-    '''method which prepares list of dict coordiantes - magnetic'''
-    def preapreListDictonaryCoordinatesMagneticLocate(self,tList):
-        for cp in self.locationCp_distinct:
-            tmp = {}
-            tmp['CHECKPOINT'] = cp
-            tmp['COUNTER'] = 0
-            tList.append(tmp)
+    """method preapres dictonry to gain documents for recover missing documents"""
+    def preapreListDictonaryForRecoverMissingDocuments(self,tList):
+        for dic in tList:
+            dic['RECOVER_DOCUMENTS'] = []
 
-    '''method which prepares list of dict coordiantes - RSSI'''
-    def preapreListDictonaryCoordinatesRssiLocate(self, counterList):
-        for cp in self.locationCp_distinct:
-            for mac in self.macAp_locate_distinct:
-                tmp = {}
-                tmp['CHECKPOINT'] = cp
-                tmp['MAC_AP'] = mac
-                tmp['COUNTER'] = 0
-                counterList.append(tmp)
+    #""" method creates json documents to save in fingerprint map magnetic"""
+    #def preapreJsonDocuments(self, tList, size):
+    #    for i in range(size):
+    #        tmpDic = {}
+    #        tmpDic['STATISTICS'] = {'PERCENTILE - 90': 0, "PERCENTILE - 20" : 0,
+    #        "MIN" : 0, "PERCENTILE - 10" : 0, "STANDARD_DEVIATION" : 0,
+    #        "PERCENTILE - 70" : 0, "PERCENTILE - 50" : 0, "MODE" : 0,
+    #        "MAX" : 0, "MEDIANA" : 0, "MEAN" : 0}
+#
+#            tmpDic["MAGNETIC_AVG_TIME"] = "25484"
+#
+#            tmpDic["STATISTICS_NORM"] = { "PERCENTILE - 90" : 0, "MIN" : 0,
+#              "STANDARD_DEVIATION" : 0, "PERCENTILE - 20" : 0,
+#              "PERCENTILE - 10" : 0, "MAX" : 0, "PERCENTILE - 70" : 0,
+#              "PERCENTILE - 50" : 0, "MODE" : 0, "MEDIANA" : 0, "MEAN" : 0}
+#
+#            tmpDic["MAC_PHONE"] = "e8:99:c4:8e:97:36"
+#            tmpDic["STEP"] = [2,3]
+#            tmpDic["PLACE"] = "kuznia1"
+#            tmpDic["MODE"] = "FEED_MAP"
+#            tmpDic["IP_PHONE"] = "192.168.1.100"
+#            tmpDic["TIMESTAMP"] = "2015-07-02:14-20-09.540"
+#            tmpDic["Y"] = 0
+#            tmpDic["X"] = 0
+#            tmpDic["MAGNETIC_DATA_NORM"] = []
+#            tmpDic["MAGNETIC_DATA"] = []
+#            tmpDic["DATA_SIZE"] = 200
+#            tmpDic["HASH"] = "DEFAULT"
+
+#            tList.append(tmpDic)
+
+    #"""method creates ditonary for keeping data statistics for recoverd documents"""
+    #def preapreDictonaryStatistic(self, tDict):
+    #    tDict = {}
+    #    for dataStatistics in self.STATISTIC_NAME:
+    #        tDict[]
+###############################################################################
+    """method changes filed POSITIONS to seperate x and y. changes step to
+    true value"""
+    def chnageFiledPositionToXAndY(self):
+        count = 0
+        docList=[]
+        for document in self.coll_fingerprint.find({}):
+            pos = document['POSITIONS']
+            document.update({'X' : pos[0]})
+            document.update({'Y' : pos[1]})
+            document['STEP'] = [2,3]
+            self.coll_fingerprint.save(document)
+            count += 1
+        print 'MODIFIED: ' + str(count)
+        self.coll_fingerprint.update({}, {'$unset': {'POSITIONS':1}}, multi=True)
+
+        for document in self.coll_locate.find({}):
+            document['STEP'] = [2,3]
+            self.coll_locate.save(document)
+
+    """method deletes invalid y coordinate = 39"""
+    def deleteInvalidYCoordinate(self):
+        cursor = self.coll_fingerprint.find({ 'Y' : 39})
+        for doc in cursor:
+            self.coll_fingerprint.delete_one({'_id' : doc['_id']})
+        print 'DOCUMENTS WITH Y 39 REMOVED -' +  str(self.coll_fingerprint.count())
+
+    """method counts norm and statistic for norm"""
+    def countNormAndStatistics(self):
+        for doc in self.coll_fingerprint.find({}):
+            if  'MAGNETIC_DATA' in doc.viewkeys():
+                tmp = doc['MAGNETIC_DATA']
+                norm = []
+                print 'RAW DATA SIZE: ' +  str(len(tmp))
+                for i in range(0,len(tmp),3):
+                    norm.append(sqrt(pow(tmp[i],2) + pow(tmp[i+1],2) + pow(tmp[i+2],2)))
+                    print 'DATA NORM SIZE: ' +  str(len(norm))
+                    doc['MAGNETIC_DATA_NORM'] = norm
+                dataStatistics = self.countStatisticsData(doc['MAGNETIC_DATA_NORM'])
+                doc['STATISTICS_NORM'] = dataStatistics
+                self.coll_fingerprint.save(doc)
+
+        for doc in self.coll_locate.find({}):
+            if  'MAGNETIC_DATA' in doc.viewkeys():
+                tmp = doc['MAGNETIC_DATA']
+                norm = []
+                print 'RAW DATA SIZE: ' +  str(len(tmp))
+                for i in range(0,len(tmp),3):
+                    norm.append(sqrt(pow(tmp[i],2) + pow(tmp[i+1],2) + pow(tmp[i+2],2)))
+                    print 'DATA NORM SIZE: ' +  str(len(norm))
+                    doc['MAGNETIC_DATA_NORM'] = norm
+                dataStatistics = self.countStatisticsData(doc['MAGNETIC_DATA_NORM'])
+                doc['STATISTICS_NORM'] = dataStatistics
+                self.coll_locate.save(doc)
+
+    """method create missing magnetic doc files in magnetic fingerprint"""
+    def createMissingMagneticDocuments(self):
+        cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}})
+        docs = [res for res in cursor]
+        size = len(self.x_distinct)*len(self.y_distinct)
+
+        msg = 'Found %s MAGNETIC DOCUMENTS. SHOULD BE: %s' % (len(docs),size)
+        print msg
+
+        missingMagneticDocuments = []
+        self.preapreListDictonaryCoordinatesMagneticFingerprint(missingMagneticDocuments)
+        for doc in docs:
+            for counterDic in missingMagneticDocuments:
+                if doc['X'] == counterDic['X'] and doc['Y'] == counterDic['Y']:
+                    counterDic['COUNTER'] += 1
+        print 'FOR EACH POSITION FOUND NUMBER OF DOCUMENTS:'
+
+        missingMagneticDocuments = [dic for dic in missingMagneticDocuments if dic['COUNTER'] == 0]
+        print 'Number of missing documents: ' + str(len(missingMagneticDocuments))
+
+        self.preapreListDictonaryForRecoverMissingDocuments(missingMagneticDocuments)
+        for dic in missingMagneticDocuments:
+            xBefore = dic['X'] - 2
+            xAfter = dic['X'] + 2
+            yBefore = dic['Y'] - 3
+            yAfter = dic['Y'] + 3
+            docs = []
+            cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}, 'X': xBefore, 'Y': dic['Y']})
+            tmpDocs = [res for res in cursor]
+            for doc in tmpDocs:
+                docs.append(doc)
+            cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}, 'X': xAfter, 'Y': dic['Y']})
+            tmpDocs = [res for res in cursor]
+            for doc in tmpDocs:
+                docs.append(doc)
+            cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}, 'X': dic['X'], 'Y': yBefore})
+            tmpDocs = [res for res in cursor]
+            for doc in tmpDocs:
+                docs.append(doc)
+            cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}, 'X': dic['X'], 'Y': yAfter})
+            tmpDocs = [res for res in cursor]
+            for doc in tmpDocs:
+                docs.append(doc)
+            dic['RECOVER_DOCUMENTS'] = docs
+
+        for doc in missingMagneticDocuments:
+            print 'X: ' +  str(doc['X'])
+            print 'Y: ' +  str(doc['Y'])
+            print len(doc['RECOVER_DOCUMENTS'])
+            raw_input()
+
+        recoverdDocuments = []
+        for dic in missingMagneticDocuments:
+            tmplist = dic['RECOVER_DOCUMENTS']
+
+            tmpDic = {}
+            tmpDic['STATISTICS'] = {'PERCENTILE - 90': 0, "PERCENTILE - 20" : 0,
+            "MIN" : 0, "PERCENTILE - 10" : 0, "STANDARD_DEVIATION" : 0,
+            "PERCENTILE - 70" : 0, "PERCENTILE - 50" : 0, "MODE" : 0,
+            "MAX" : 0, "MEDIANA" : 0, "MEAN" : 0}
+
+            tmpDic["MAGNETIC_AVG_TIME"] = "25484"
+
+            tmpDic["STATISTICS_NORM"] = { "PERCENTILE - 90" : 0, "MIN" : 0,
+              "STANDARD_DEVIATION" : 0, "PERCENTILE - 20" : 0,
+              "PERCENTILE - 10" : 0, "MAX" : 0, "PERCENTILE - 70" : 0,
+              "PERCENTILE - 50" : 0, "MODE" : 0, "MEDIANA" : 0, "MEAN" : 0}
+
+            tmpDic["MAC_PHONE"] = "e8:99:c4:8e:97:36"
+            tmpDic["STEP"] = [2,3]
+            tmpDic["PLACE"] = "kuznia1"
+            tmpDic["MODE"] = "FEED_MAP"
+            tmpDic["IP_PHONE"] = "192.168.1.100"
+            tmpDic["TIMESTAMP"] = "2015-07-02:14-20-09.540"
+            tmpDic["Y"] = dic['Y']
+            tmpDic["X"] = dic['X']
+            tmpDic["MAGNETIC_DATA_NORM"] = []
+            tmpDic["MAGNETIC_DATA"] = []
+            tmpDic["DATA_SIZE"] = 200
+            tmpDic["HASH"] = "DEFAULT"
+
+            for recoverDoc in tmplist:
+                for dataStatistics in self.STATISTIC_NAME:
+                    tmpDic['STATISTICS'][dataStatistics] += recoverDoc['STATISTICS'][dataStatistics]
+                    tmpDic["STATISTICS_NORM"][dataStatistics] += recoverDoc["STATISTICS_NORM"][dataStatistics]
+
+            for dataStatistics in self.STATISTIC_NAME:
+                tmpDic['STATISTICS'][dataStatistics] /= float(len(tmplist))
+                tmpDic["STATISTICS_NORM"][dataStatistics] /= float(len(tmplist))
+            recoverdDocuments.append(tmpDic)
+
+        print 'BEFORE INSERTING MISSING DOCUMENTS: ' + str(self.coll_fingerprint.count())
+        for recoverDoc in recoverdDocuments:
+            self.coll_fingerprint.save(recoverDoc)
+        print 'AFTER INSERTING MISSING DOCUMENTS: ' + str(self.coll_fingerprint.count())
+
+###############################################################################
+    """method drops fingeprint collection and load raw data again"""
+    def dropAndLoadDataFingerprint(self):
+        self.coll_fingerprint.drop()
+        os.system('mongoimport --db fingerprint --collection kuznia1 --file ../data-backup/kuznia1_DATASIZE_200_STEP_3_1_DEFAULT_fingerprint_2.07.15.json')
+
+    """method drops locate collection and load raw data again"""
+    def dropAndLoadDatalocate(self):
+        self.coll_locate.drop()
+        os.system('mongoimport --db locate --collection kuznia1 --file ../data-backup/kuznia1_DATASIZE_200_STEP_3_1_DEFAULT_locate_2.07.15.json')
 ###############################################################################
 
-    '''method which implements menu for script'''
     def menu(self):
-        msg = '''
-        quit -q,
-        0 - check if magnetic data is missing - fingerprint,
-        1 - if magnetic data is doubled - fingerprint,
-        2 - if rssi is doubled - fingerprint
-        3 - check if magnetic data is missing - locate,
-        4 - if magnetic data is doubled - locate,
-        5 - if rssi is doubled -locate
-        6 - count data in collection and repair if necessary - fingerprint
-        7 - count data in collection and repair if necessary - locate
-        8 - count documents per coordinate
-        9 - count documents per checkpoint
-        10 - check if locate collection has checkpoint as in file with coordinates'''
+
         while(True):
-            self.printInfoAboutData()
-            anws = raw_input(msg)
+            anws = raw_input('''
+            q - quit
+            0 - drop and load data fingeprint - kuznia
+            1 - drop and load data locate - kuznia
+            2 - change filed POSITINS to X and Y and (STEP to [2,3] - finger/locate)
+            3 - delete invalid y = 39 coordinate
+            4 - count norm and statistic for norm - magnetic - finger/locate
+            5 - add mising documnets to magnetic fingerprint map''')
+
             if anws == 'q':
                 break
             elif anws == '0':
-                self.isMagneticMissingFingerprint()
+                self.dropAndLoadDataFingerprint()
             elif anws == '1':
-                self.isMagneticDoubledFingerprint()
+                self.dropAndLoadDatalocate()
             elif anws == '2':
-                self.isRssiDoubledFingerprint()
+                self.chnageFiledPositionToXAndY()
             elif anws == '3':
-                self.isMagneticMissingLocate()
+                self.deleteInvalidYCoordinate()
             elif anws == '4':
-                self.isMagneticDoubledLocate()
+                self.countNormAndStatistics()
             elif anws == '5':
-                self.isRssiDoubledLocate()
-            elif anws == '6':
-                self.countDataEveryDocumentFingerprint()
-            elif anws == '7':
-                self.countDataEveryDocumentLocate()
-            elif anws == '8':
-                self.showNumberOfDcumentsOnCoordinates()
-            elif anws == '9':
-                self.numberOfDocumnentsPerCheckpoint()
-            elif anws == '10':
-                self.comapreLocateColectionWithFile()
-
+                self.createMissingMagneticDocuments()
 
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        collName = sys.argv[1]
-        cleanData = CleanData(collName)
-        cleanData.menu()
-    else:
-        sys.exit('Script requires 2 args, given: %s' % len(sys.argv))
+    CleanDataKuznia().menu()
