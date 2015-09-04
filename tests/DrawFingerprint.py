@@ -7,6 +7,8 @@ from matplotlib import cm
 import numpy as np
 import matplotlib.pyplot as plt
 
+import scipy.stats as stats
+
 class DrawFingerprint(object):
 
     ''' constructor'''
@@ -393,6 +395,286 @@ class DrawFingerprint(object):
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
+        
+    def drawHistogramSideMagneticKopalnia(self):
+        docsX1 = []
+        docsX2 = []
+        docsX3 = []
+
+        cursor = self.coll.find({'MAGNETIC_DATA': {'$exists': True}, 'X': 1})
+        docsX1 = [res for res in cursor]
+        cursor = self.coll.find({'MAGNETIC_DATA': {'$exists': True}, 'X': 2})
+        docsX2 = [res for res in cursor]
+        cursor = self.coll.find({'MAGNETIC_DATA': {'$exists': True}, 'X': 3})
+        docsX3 = [res for res in cursor]
+        
+        valueListX1 = []
+        valueListX2 = []
+        valueListX3 = []
+        
+        for doc in docsX1:
+            tmpList = doc['MAGNETIC_DATA_NORM']
+            for value in tmpList:
+                valueListX1.append(value)
+        
+        for doc in docsX2:
+            tmpList = doc['MAGNETIC_DATA_NORM']
+            for value in tmpList:
+                valueListX2.append(value)
+        
+        for doc in docsX3:
+            tmpList = doc['MAGNETIC_DATA_NORM']
+            for value in tmpList:
+                valueListX3.append(value)
+                
+        valueListX1 = np.asarray(valueListX1)
+        valueListX2 = np.asarray(valueListX2)
+        valueListX3 = np.asarray(valueListX3)
+        
+        plt.hist(valueListX1)
+        plt.title("Histogram - magnetic - kopalnia - x = 1")
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        plt.show()
+        
+        plt.hist(valueListX2)
+        plt.title("Histogram - magnetic - kopalnia - x = 2")
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        plt.show()
+        
+        plt.hist(valueListX3)
+        plt.title("Histogram - magnetic - kopalnia - x = 3")
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        plt.show()
+        
+    def drawHistogramSideRssiKopalnia(self):
+        macIndex = int(raw_input('''%s\nChoose mac address(0-%s)''' % (str(self.mac_ap_distinct),len(self.mac_ap_distinct) - 1)))
+        mac = self.mac_ap_distinct[macIndex]
+        
+        docsX1 = []
+        docsX2 = []
+        docsX3 = []
+
+        cursor = self.coll.find({'RSSI_DATA': {'$exists': True}, 'X': 1, 'MAC_AP': mac})
+        docsX1 = [res for res in cursor]
+        cursor = self.coll.find({'RSSI_DATA': {'$exists': True}, 'X': 2, 'MAC_AP': mac})
+        docsX2 = [res for res in cursor]
+        cursor = self.coll.find({'RSSI_DATA': {'$exists': True}, 'X': 3, 'MAC_AP': mac})
+        docsX3 = [res for res in cursor]
+        
+        valueListX1 = []
+        valueListX2 = []
+        valueListX3 = []
+        
+        for doc in docsX1:
+            tmpList = doc['RSSI_DATA']
+            for value in tmpList:
+                valueListX1.append(value)
+        
+        for doc in docsX2:
+            tmpList = doc['RSSI_DATA']
+            for value in tmpList:
+                valueListX2.append(value)
+        
+        for doc in docsX3:
+            tmpList = doc['RSSI_DATA']
+            for value in tmpList:
+                valueListX3.append(value)
+                
+        valueListX1 = np.asarray(valueListX1)
+        valueListX2 = np.asarray(valueListX2)
+        valueListX3 = np.asarray(valueListX3)
+        
+        plt.hist(valueListX1)
+        plt.title("Histogram - RSSI - kopalnia - x = 1")
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        plt.show()
+        
+        plt.hist(valueListX2)
+        plt.title("Histogram - RSSI - kopalnia - x = 2")
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        plt.show()
+        
+        plt.hist(valueListX3)
+        plt.title("Histogram - RSSI - kopalnia - x = 3")
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        plt.show()
+        
+    def drawCumulativeDistributionSideMagneticKopalnia(self):
+        docsX1 = []
+        docsX2 = []
+        docsX3 = []
+
+        cursor = self.coll.find({'MAGNETIC_DATA': {'$exists': True}, 'X': 1})
+        docsX1 = [res for res in cursor]
+        cursor = self.coll.find({'MAGNETIC_DATA': {'$exists': True}, 'X': 2})
+        docsX2 = [res for res in cursor]
+        cursor = self.coll.find({'MAGNETIC_DATA': {'$exists': True}, 'X': 3})
+        docsX3 = [res for res in cursor]
+        
+        valueListX1 = []
+        valueListX2 = []
+        valueListX3 = []
+        
+        for doc in docsX1:
+            tmpList = doc['MAGNETIC_DATA_NORM']
+            for value in tmpList:
+                valueListX1.append(value)
+        
+        for doc in docsX2:
+            tmpList = doc['MAGNETIC_DATA_NORM']
+            for value in tmpList:
+                valueListX2.append(value)
+        
+        for doc in docsX3:
+            tmpList = doc['MAGNETIC_DATA_NORM']
+            for value in tmpList:
+                valueListX3.append(value)
+                
+        valueListX1 = np.sort(valueListX1)
+        yvalsX1=np.arange(len(valueListX1))/float(len(valueListX1))
+        valueListX2 = np.sort(valueListX2)
+        yvalsX2=np.arange(len(valueListX2))/float(len(valueListX2))
+        valueListX3 = np.sort(valueListX3)
+        yvalsX3=np.arange(len(valueListX3))/float(len(valueListX3))
+        
+        
+        plt.plot( valueListX1, yvalsX1 )
+        plt.title("Cumulative distribution - x = 1 - magnetic")
+        plt.xlabel("Value")
+        plt.ylabel("Probability")
+        #plt.ylim(0,5)
+        plt.show()
+        
+        plt.plot( valueListX2, yvalsX2 )
+        plt.title("Cumulative distribution - x = 2 - magnetic")
+        plt.xlabel("Value")
+        plt.ylabel("Probability")
+        #plt.ylim(0,5)
+        plt.show()
+        
+        plt.plot( valueListX3, yvalsX3 )
+        plt.title("Cumulative distribution - x = 3 - magnetic")
+        plt.xlabel("Value")
+        plt.ylabel("Probability")
+        #plt.ylim(0,5)
+        plt.show()
+        
+        
+    def drawCumulativeDistributionSideRssiKopalnia(self):
+        macIndex = int(raw_input('''%s\nChoose mac address(0-%s)''' % (str(self.mac_ap_distinct),len(self.mac_ap_distinct) - 1)))
+        mac = self.mac_ap_distinct[macIndex]
+        
+        docsX1 = []
+        docsX2 = []
+        docsX3 = []
+
+        cursor = self.coll.find({'RSSI_DATA': {'$exists': True}, 'X': 1, 'MAC_AP': mac})
+        docsX1 = [res for res in cursor]
+        cursor = self.coll.find({'RSSI_DATA': {'$exists': True}, 'X': 2, 'MAC_AP': mac})
+        docsX2 = [res for res in cursor]
+        cursor = self.coll.find({'RSSI_DATA': {'$exists': True}, 'X': 3, 'MAC_AP': mac})
+        docsX3 = [res for res in cursor]
+        
+        valueListX1 = []
+        valueListX2 = []
+        valueListX3 = []
+        
+        for doc in docsX1:
+            tmpList = doc['RSSI_DATA']
+            for value in tmpList:
+                valueListX1.append(value)
+        
+        for doc in docsX2:
+            tmpList = doc['RSSI_DATA']
+            for value in tmpList:
+                valueListX2.append(value)
+        
+        for doc in docsX3:
+            tmpList = doc['RSSI_DATA']
+            for value in tmpList:
+                valueListX3.append(value)
+                
+        valueListX1 = np.sort(valueListX1)
+        yvalsX1=np.arange(len(valueListX1))/float(len(valueListX1))
+        valueListX2 = np.sort(valueListX2)
+        yvalsX2=np.arange(len(valueListX2))/float(len(valueListX2))
+        valueListX3 = np.sort(valueListX3)
+        yvalsX3=np.arange(len(valueListX3))/float(len(valueListX3))
+        
+        
+        plt.plot( valueListX1, yvalsX1 )
+        plt.title("Cumulative distribution - x = 1 - RSSI")
+        plt.xlabel("Value")
+        plt.ylabel("Probability")
+        #plt.ylim(0,5)
+        plt.show()
+        
+        plt.plot( valueListX2, yvalsX2 )
+        plt.title("Cumulative distribution - x = 2 - RSSI")
+        plt.xlabel("Value")
+        plt.ylabel("Probability")
+        #plt.ylim(0,5)
+        plt.show()
+        
+        plt.plot( valueListX3, yvalsX3 )
+        plt.title("Cumulative distribution - x = 3 - RSSI")
+        plt.xlabel("Value")
+        plt.ylabel("Probability")
+        #plt.ylim(0,5)
+        plt.show()
+        
+    def testIfDataFitNormalDistribution(self):
+        cursor = self.coll.find({'MAGNETIC_DATA': {'$exists': True}})
+        allMagneticDocs = [res for res in cursor]
+        
+        positionMagneticAnws = []
+        allMagneticAnws = {'value': [],'statistic': 0, 'pvalue': 0}
+        for x in self.x_distinct:
+            for y in self.y_distinct:
+                tmpDic = {}
+                tmpDic['X'] = x
+                tmpDic['Y'] = y
+                tmpDic['TEST_ANWS'] = {'value': [],'statistic': 0, 'pvalue': 0}
+                positionMagneticAnws.append(tmpDic)
+                
+        for doc in allMagneticDocs:
+            tmpList = doc['MAGNETIC_DATA_NORM']
+            for value in tmpList:
+                allMagneticAnws['value'].append(value)
+            
+            for dic in positionMagneticAnws:
+                if dic['X'] == doc['X'] and dic['Y'] == doc['Y']:
+                    dic['TEST_ANWS']['value'] = tmpList
+                    
+        allMagneticAnws['statistic'], allMagneticAnws['pvalue'] = stats.normaltest(allMagneticAnws['value'])
+        
+        for dic in positionMagneticAnws:
+            if dic['TEST_ANWS']['value'] == []:
+                print dic['X']
+                print dic['Y']
+                print dic['TEST_ANWS']['value']
+                continue
+            dic['TEST_ANWS']['statistic'], dic['TEST_ANWS']['pvalue'] = stats.normaltest(dic['TEST_ANWS']['value'])
+            
+        print 'MAGNETIC NORM TEST FOR DATA FOR WHOLE MAP'
+        print 'statistic: ' + str(allMagneticAnws['statistic'])
+        print 'pvalue: ' + str(allMagneticAnws['pvalue'])
+        
+        print
+        print 'MAGNETIC NORM TEST FOR EACH REFERENCE POINT ON MAP'
+        print
+        
+        for dic in positionMagneticAnws:
+            print 'X: ' + str(dic['X']) + ', Y: ' + str(dic['Y']) + ' - statistic: ' + str(dic['TEST_ANWS']['statistic']) + ', pvalue: ' + str(dic['TEST_ANWS']['pvalue'])
+            print 
+        
+        
 ###############################################################################
     def menu(self):
 
@@ -413,6 +695,10 @@ class DrawFingerprint(object):
             10 - draw distribution - choose positions - rssi
             11 - draw distribution - choose positions - magnetic
             12 - test if data fits normal distribution
+            13 - draw side histogram - magnetic - kopalnia
+            14 - draw side histogram - RSSI - kopalnia
+            15 - draw side cumulative distribution - magnetic - kopalnia
+            16 - draw side cumulative distribution - RSSI - kopalnia
             ''')
 
             if anws == 'q':
@@ -444,7 +730,15 @@ class DrawFingerprint(object):
             elif anws == '11':
                 self.drawCumuLativeDistributionPositionsMagnetic()
             elif anws == '12':
-                pass
+                self.testIfDataFitNormalDistribution()
+            elif anws == '13':
+                self.drawHistogramSideMagneticKopalnia()
+            elif anws == '14':
+                self.drawHistogramSideRssiKopalnia()
+            elif anws == '15':
+                self.drawCumulativeDistributionSideMagneticKopalnia()
+            elif anws == '16':
+                self.drawCumulativeDistributionSideRssiKopalnia()
 if __name__ == '__main__':
     if len(sys.argv)  == 2:
         collName = sys.argv[1]
