@@ -570,7 +570,6 @@ class Algorithms (object):
 
         '''parse cursor data to python dictonary'''
         magneticFingerprintDocs = [res for res in magneticFingerprintDocs]
-        rssiFingerprintDocs = []
         rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
         magneticLocateDocs = [res for res in magneticLocateDocs]
         rssiLocateDocs = [res for res in rssiLocateDocs]

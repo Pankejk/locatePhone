@@ -360,7 +360,7 @@ class Algorithms (object):
         return anwser
     
     """method chooses the best list of neighbours points for certain dataStatistic"""
-    """SPRAWDZIC CZY BLAD JAKI MZNA POELNIC DOBRZE DZIALA W PRAWDOPODOBIENSTWIE"""
+    """SPRAWDZIC CZY BLAD JAKI MOZNA POELNIC DOBRZE DZIALA W PRAWDOPODOBIENSTWIE"""
     def chooseTheBestList(self):
         bestListDict = {}
         bestListDict['RSSI'] = {}
