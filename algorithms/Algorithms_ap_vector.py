@@ -2,6 +2,7 @@
 
 from pymongo import MongoClient
 import sys
+import os
 import operator
 
 import time
@@ -438,11 +439,12 @@ class Algorithms (object):
         rssiFingerprintDocs = []
         print 'In current checkpoint there is number of macs: ' + str(len(locateCheckpointApList))
         for dic in fingerprintApList:
-            if (len(locateCheckpointApList) - dic['COUNTER']) < self.numberOfMissingAp:
+            if (len(locateCheckpointApList) - dic['COUNTER']) <= self.numberOfMissingAp:
                 for doc in rssiTmpDocs:
                     if doc['X'] == dic['X'] and doc['Y'] == dic['Y']:
                         rssiFingerprintDocs.append(doc)
         print 'Number of documents in RSSI fingerprint after finding docs: ' + str(len(rssiFingerprintDocs))
+        
         returnDict ={'FINGERPRINT_MAGNETIC': magneticFingerprintDocs, 'FINGERPRINT_RSSI': rssiFingerprintDocs,
                       'LOCATE_MAGNETIC': magneticLocateDocs, 'LOCATE_RSSI': rssiLocateDocs}
         return returnDict

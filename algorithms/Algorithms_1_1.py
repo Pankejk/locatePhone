@@ -2,6 +2,7 @@
 
 from pymongo import MongoClient
 import sys
+import os
 import operator
 
 import time
@@ -33,8 +34,11 @@ class Algorithms (object):
         self.ALGORITHM_DISTANCE_NAME = ['STATISTICS', 'PROBABILITY']
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_']
         self.STANDARD_DEVIATION_RSSI = 5
-        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_' + 'APLENGTH_' + str(len(self.GOOD_AP_LIST)) + '_' + os.path.basename(__file__).split('.')[0]
         self.GOOD_AP_LIST = ['f8:d1:11:48:9b:26', '68:7f:74:09:f6:8b', '28:80:23:28:7e:82', '28:80:23:28:7f:f0', '28:80:23:28:8a:1', '28:80:23:28:8a:b2', '14:cc:20:d1:51:04']
+        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_' + 'APLENGTH_' + str(len(self.GOOD_AP_LIST)) + '_' + os.path.basename(__file__).split('.')[0]
+        self.STATISTIC_RSSI_EPSILON = 1
+        self.STATISTIC_MAGNETIC_EPSILON = 0.01
+        self.PROBABILITY_EPSILON = 0.0001
         
         self.x_distinct = None
         self.y_distinct = None
@@ -365,12 +369,19 @@ class Algorithms (object):
             tmpListAp = resultDic['RSSI']['CHOSEN_POINTS'][dataStatistic]
             #t = resultDic['MAGNETIC']['CHOSEN_POINTS'][dataStatistic]
             mainRatio = 0
-            for tRatio in tmpListAp:
-                mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
-                
+            if self.choosenAlgorithmDistance == 0:
+                for tRatio in tmpListAp:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.STATISTIC_RSSI_EPSILON
+                    mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
+            elif self.choosenAlgorithmDistance == 1:
+                for tRatio in tmpListAp:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.PROBABILITY_EPSILON
+                    mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
             ratioList = []
             for tRatio in tmpListAp:
-                ratioList.append(((1/pow(tRatio,self.numberOfNeighbours))/float(mainRatio)))
+                ratioList.append(((1/pow(tRatio[name],self.numberOfNeighbours))/float(mainRatio)))
             
             tmp = [0,0]
             for i in range(len(tmpListAp)):
@@ -390,20 +401,28 @@ class Algorithms (object):
             tmpList = resultDic['MAGNETIC']['CHOSEN_POINTS'][dataStatistic]
             
             mainRatio = 0
-            for tRatio in tmpList:
-                mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
+            if self.choosenAlgorithmDistance == 0:
+                for tRatio in tmpList:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.STATISTIC_MAGNETIC_EPSILON
+                    mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
+            elif self.choosenAlgorithmDistance == 1:
+                for tRatio in tmpList:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.PROBABILITY_EPSILON
+                    mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
                 
             ratioList = []
             for tRatio in tmpList:
-                ratioList.append(((1/pow(tRatio,self.numberOfNeighbours))/float(mainRatio)))
+                print tRatio
+                print mainRatio
+                raw_input()
+                ratioList.append(((1/pow(tRatio[name],self.numberOfNeighbours))/float(mainRatio)))
             
             tmp = [0,0]
             for i in range(len(tmpList)):
                 tmp[0] += tmpListAp[i]['X_FINGERPRINT'] * ratioList[i]
                 tmp[1] += tmpListAp[i]['Y_FINGERPRINT'] * ratioList[i]
-            
-            print dataStatistic
-            #print ratio
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] = tmp[0]
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['Y'] = tmp[1]
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['X'] = abs(resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] - resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['X'])
@@ -625,7 +644,7 @@ class Algorithms (object):
                     statisticsLocate = docLocate['STATISTICS']
                     statisticsFingerprint = docFingerprint['STATISTICS']
                     for dataStatistic in self.STATISTIC_NAME:
-                        tmpDiff = scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION'])
+                        tmpDiff = scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],self.STANDARD_DEVIATION_RSSI)
                         #print tmpDiff
                         #raw_input()
                         diff[dataStatistic] = tmpDiff
