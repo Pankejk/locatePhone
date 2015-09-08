@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from pymongo import MongoClient
 import time
 import sys
@@ -88,7 +90,7 @@ class DrawFingerprint(object):
         ax = fig.gca(projection='3d')
         surf = ax.plot_surface(drawArray['X'], drawArray['Y'], drawArray['RSSI'],rstride=1, cstride=1, alpha=1,cmap=cm.jet,  linewidth=0)
         fig.colorbar(surf, shrink=0.5, aspect=5)
-        plt.title('RSSI[dbm] - ' + self.mac_ap_distinct[chosenAp])
+        plt.title('RSSI [dBm] - ' + self.mac_ap_distinct[chosenAp])
         plt.xlabel('width [m]')
         plt.ylabel('length [m]')
         plt.show()
@@ -131,7 +133,7 @@ class DrawFingerprint(object):
         ax = fig.gca(projection='3d')
         surf = ax.plot_surface(drawArray['X'], drawArray['Y'], drawArray['MAGNETIC'],rstride=1, cstride=1, alpha=1,cmap=cm.jet,  linewidth=0)
         fig.colorbar(surf, shrink=0.5, aspect=5)
-        plt.title('MAGNETIC[mikroT]')
+        plt.title(u'MAGNETIC [μT]')
         plt.xlabel('width [m]')
         plt.ylabel('length [m]')
         plt.show()
@@ -215,8 +217,8 @@ class DrawFingerprint(object):
         
         valueList = np.asarray(valueList)
         plt.hist(valueList, histtype='stepfilled')
-        plt.title("Histogram - whole map magnetic")
-        plt.xlabel("Value")
+        plt.title("Histogram - whole map MAGNETIC")
+        plt.xlabel(u"Value [μT]")
         plt.ylabel("Frequency")
         #plt.ylim(0,5)
         plt.show()
@@ -236,8 +238,8 @@ class DrawFingerprint(object):
         
         valueList = np.asarray(valueList)
         plt.hist(valueList, histtype='stepfilled')
-        plt.title("Histogram - whole map RSSI")
-        plt.xlabel("Value")
+        plt.title("Histogram - whole map RSSI - " + mac)
+        plt.xlabel("Value [dBm]")
         plt.ylabel("Frequency")
         #plt.ylim(0,5)
         plt.show()
@@ -259,8 +261,8 @@ class DrawFingerprint(object):
         print valueList
         print yvals
         plt.plot( valueList, yvals )
-        plt.title("Cumulative distribution - whole map magnetic")
-        plt.xlabel("Value")
+        plt.title("Cumulative distribution - whole map MAGNETIC")
+        plt.xlabel(u"Value [μT]")
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
@@ -285,8 +287,8 @@ class DrawFingerprint(object):
         print valueList
         print yvals
         plt.plot( valueList, yvals )
-        plt.title("Cumulative distribution - whole map RSSI")
-        plt.xlabel("Value")
+        plt.title("Cumulative distribution - whole map RSSI - " + mac)
+        plt.xlabel("Value [dBm]")
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
@@ -308,8 +310,8 @@ class DrawFingerprint(object):
         
         valueList = np.asarray(valueList)
         plt.hist(valueList, histtype='stepfilled')
-        plt.title("Histogram - x= %s,y= %s - magnetic" % (postions[0],postions[1]))
-        plt.xlabel("Value")
+        plt.title("Histogram - x= %s,y= %s - MAGNETIC" % (postions[0],postions[1]))
+        plt.xlabel(u"Value [μT]")
         plt.ylabel("Frequency")
         plt.ylim(0,5)
         plt.show()
@@ -334,8 +336,8 @@ class DrawFingerprint(object):
         
         valueList = np.asarray(valueList)
         plt.hist(valueList, histtype='stepfilled')
-        plt.title("Histogram - x= %s,y= %s - RSSI" % (postions[0],postions[1]))
-        plt.xlabel("Value")
+        plt.title("Histogram - x= %s,y= %s - RSSI - %s" % (postions[0],postions[1], mac))
+        plt.xlabel("Value [dBm]")
         plt.ylabel("Frequency")
         #plt.ylim(0,5)
         plt.show()
@@ -362,8 +364,8 @@ class DrawFingerprint(object):
         print valueList
         print yvals
         plt.plot( valueList, yvals )
-        plt.title("Cumulative distribution - x= %s,y= %s - magnetic" % (postions[0],postions[1]))
-        plt.xlabel("Value")
+        plt.title("Cumulative distribution - x= %s,y= %s - MAGNETIC" % (postions[0],postions[1]))
+        plt.xlabel(u"Value [μT]")
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
@@ -390,8 +392,8 @@ class DrawFingerprint(object):
         print valueList
         print yvals
         plt.plot( valueList, yvals )
-        plt.title("Cumulative distribution - x= %s,y= %s - RSSI")
-        plt.xlabel("Value")
+        plt.title("Cumulative distribution - x= %s,y= %s - RSSI - " + mac)
+        plt.xlabel("Value [dBm]")
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
@@ -432,20 +434,20 @@ class DrawFingerprint(object):
         valueListX3 = np.asarray(valueListX3)
         
         plt.hist(valueListX1)
-        plt.title("Histogram - magnetic - kopalnia - x = 1")
-        plt.xlabel("Value")
+        plt.title("Histogram - MAGNETIC - kopalnia - x = 1")
+        plt.xlabel(u"Value [μT]")
         plt.ylabel("Frequency")
         plt.show()
         
         plt.hist(valueListX2)
-        plt.title("Histogram - magnetic - kopalnia - x = 2")
-        plt.xlabel("Value")
+        plt.title("Histogram - MAGNETIC - kopalnia - x = 2")
+        plt.xlabel(u"Value [μT]")
         plt.ylabel("Frequency")
         plt.show()
         
         plt.hist(valueListX3)
-        plt.title("Histogram - magnetic - kopalnia - x = 3")
-        plt.xlabel("Value")
+        plt.title("Histogram - MAGNETIC - kopalnia - x = 3")
+        plt.xlabel(u"Value [μT]")
         plt.ylabel("Frequency")
         plt.show()
         
@@ -488,20 +490,20 @@ class DrawFingerprint(object):
         valueListX3 = np.asarray(valueListX3)
         
         plt.hist(valueListX1)
-        plt.title("Histogram - RSSI - kopalnia - x = 1")
-        plt.xlabel("Value")
+        plt.title("Histogram - RSSI - kopalnia - x = 1 - " + mac)
+        plt.xlabel("Value [dBm]")
         plt.ylabel("Frequency")
         plt.show()
         
         plt.hist(valueListX2)
-        plt.title("Histogram - RSSI - kopalnia - x = 2")
-        plt.xlabel("Value")
+        plt.title("Histogram - RSSI - kopalnia - x = 2 - " + mac)
+        plt.xlabel("Value [dBm]")
         plt.ylabel("Frequency")
         plt.show()
         
         plt.hist(valueListX3)
-        plt.title("Histogram - RSSI - kopalnia - x = 3")
-        plt.xlabel("Value")
+        plt.title("Histogram - RSSI - kopalnia - x = 3 - " + mac)
+        plt.xlabel("Value [dBm]")
         plt.ylabel("Frequency")
         plt.show()
         
@@ -545,22 +547,22 @@ class DrawFingerprint(object):
         
         
         plt.plot( valueListX1, yvalsX1 )
-        plt.title("Cumulative distribution - x = 1 - magnetic")
-        plt.xlabel("Value")
+        plt.title("Cumulative distribution - x = 1 - MAGNETIC")
+        plt.xlabel(u"Value [μT]")
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
         
         plt.plot( valueListX2, yvalsX2 )
-        plt.title("Cumulative distribution - x = 2 - magnetic")
-        plt.xlabel("Value")
+        plt.title("Cumulative distribution - x = 2 - MAGNETIC")
+        plt.xlabel(u"Value [μT]")
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
         
         plt.plot( valueListX3, yvalsX3 )
-        plt.title("Cumulative distribution - x = 3 - magnetic")
-        plt.xlabel("Value")
+        plt.title("Cumulative distribution - x = 3 - MAGNETIC")
+        plt.xlabel(u"Value [μT]")
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
@@ -609,22 +611,22 @@ class DrawFingerprint(object):
         
         
         plt.plot( valueListX1, yvalsX1 )
-        plt.title("Cumulative distribution - x = 1 - RSSI")
-        plt.xlabel("Value")
+        plt.title("Cumulative distribution - x = 1 - RSSI - " + mac)
+        plt.xlabel("Value [dBm]")
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
         
         plt.plot( valueListX2, yvalsX2 )
-        plt.title("Cumulative distribution - x = 2 - RSSI")
-        plt.xlabel("Value")
+        plt.title("Cumulative distribution - x = 2 - RSSI - " + mac)
+        plt.xlabel("Value [dBm]")
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
         
         plt.plot( valueListX3, yvalsX3 )
-        plt.title("Cumulative distribution - x = 3 - RSSI")
-        plt.xlabel("Value")
+        plt.title("Cumulative distribution - x = 3 - RSSI - " + mac)
+        plt.xlabel("Value [dBm]")
         plt.ylabel("Probability")
         #plt.ylim(0,5)
         plt.show()
