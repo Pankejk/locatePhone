@@ -34,7 +34,7 @@ class Algorithms (object):
         self.ALGORITHM_DISTANCE_NAME = ['STATISTICS', 'PROBABILITY']
         self.ALGORITHM_CHOOSEPOINTS_NAME = ['_KNN_']
         self.STANDARD_DEVIATION_RSSI = 5
-        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_' + os.path.basename(__file__).split('.')[0]
+        self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_' + 'PERCENT_' + str(self.listChangeDiffPercent) + '_' + os.path.basename(__file__).split('.')[0]
         self.map = ['RSSI','MAGNETIC']
         
         self.x_distinct = None
