@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -31,6 +33,11 @@ class Results(object):
         self.STATISTIC_NAME = ["MEAN" , "MAX", "MIN", "MEDIANA", "MODE", "PERCENTILE - 10", "PERCENTILE - 20", "PERCENTILE - 50", "PERCENTILE - 70",  "PERCENTILE - 90"]
         self.ERROR_STATISTICS = ['MAX','MIN', 'MEAN', 'MODE']
         self.map = ['MAGNETIC', 'RSSI']
+        self.mac_ap_distinct = self.coll_fingerprint.distinct('MAC_AP')
+        self.x_distinct = self.coll_fingerprint.distinct('X')
+        self.y_distinct = self.coll_fingerprint.distinct('Y')
+        self.x_distinct.sort()
+        self.y_distinct.sort()
 
         self.checkPoints = {}
 
@@ -314,7 +321,17 @@ class Results(object):
             givenError = {}
             givenError['X'] = anws[0]
             givenError['Y'] = anws[1]
+            
             anwserDict = self.countNumberOfCheckPointForGivenError(givenError)
+            
+            date = str(datetime.now()).replace(' ','_')
+            date = date.replace(':','-')
+            fileName = self.collname + '_CHECKPOINTS_BELOWE_ERROR_X_' + str(givenError['X']) + '_Y_' + str(givenError['Y']) + '_' + date
+            
+            linesList = []
+            self.preapreLinesForCsvFileNumberOfCheckpointBeloweError(linesList,anwserDict)
+            self.writeToCsvFile(fileName,linesList)
+            print 'DATA SAVED TO CSV FILE'
             while(True):
                 anws = int(raw_input('quit(100)\n%s\nchoose statistic data(0-%s)' % (str(self.STATISTIC_NAME), (len(self.STATISTIC_NAME) - 1))))
                 if anws == 100:
@@ -350,7 +367,36 @@ class Results(object):
                     for doc in anwserDict[map_name][self.STATISTIC_NAME[anws]]['XY']['CHECKPOINT_LIST']:
                         tString += doc['CHECKPOINT'] + ','
                     print tString
+#########################################################################################################
+    def preapreLinesForCsvFileNumberOfCheckpointBeloweError(self, tList, counterDict):
+        for map_name in self.map:
+            firstLineFile = [self.collname + '_' + map_name]
+            tList.append(firstLineFile)
+            for dataStatistics in self.STATISTIC_NAME:
+                tmpRow = [dataStatistics]
+                tList.append(tmpRow)
+                tmpRow = ['#;X;Y;XY']
+                tList.append(tmpRow)
+                tmpRow = ['LICZBA_PUNKTOW_ODNIESIENIA',counterDict[map_name][dataStatistics]['X']['VALUE'], counterDict[map_name][dataStatistics]['Y']['VALUE'], counterDict[map_name][dataStatistics]['XY']['VALUE']]
+                tList.append(tmpRow)
+                tmpRow = ['PROCENT_PUNKTOW_ODNIESIENIA',counterDict[map_name][dataStatistics]['X']['PERCENT'], counterDict[map_name][dataStatistics]['Y']['PERCENT'], counterDict[map_name][dataStatistics]['XY']['PERCENT']]
+                tList.append(tmpRow)
+                tmpCp = {}
+                tmpCp['X'] = counterDict[map_name][dataStatistics]['X']['CHECKPOINT_LIST']
+                tmpCp['Y'] = counterDict[map_name][dataStatistics]['Y']['CHECKPOINT_LIST']
+                tmpCp['XY'] = counterDict[map_name][dataStatistics]['XY']['CHECKPOINT_LIST']
+                for k in tmpCp.keys():
+                    tmpCp[k +'_string'] = ''
+                    tmpString = ''
+                    for cp in tmpCp[k]:
+                        tmpString += cp['CHECKPOINT'] + ','
+                    tmpCp[k +'_string'] = tmpString
+                
+                tmpRow = ['LISTA_PUNKTOW_ODNIESIENIA',tmpCp['X_string'], tmpCp['Y_string'], tmpCp['XY_string']]
+                tList.append(tmpRow)
+                
 
+########################################################################################################
 
     """method shows RSSI for certain AP and magnetic field for certain checkpoint
        and for certain position on map"""
@@ -884,6 +930,200 @@ class Results(object):
                 tmpDic['ERROR_COORDINATE'] = tmpC
                 errorDic[map_name][dataStatistics] = tmpDic
 ################################################################################
+    def saveAllCheckpointsErrorsToCsvFile(self):
+        docs = {}
+        docs['RSSI'] = []
+        docs['MAGNETIC'] = []
+        for map_name in self.map:
+            cursor = self.coll.find({'FINGERPRINT_MAP': map_name})
+            docs[map_name] = [res for res in cursor]
+        linesFile = []
+        self.preapreLinesForCheckpointErrorsCsvFile(linesFile, docs)
+        date = str(datetime.now()).replace(' ','_')
+        date = date.replace(':','-')
+        fileName = self.collname + '_ALL_CHECKPOINTS_ERRORS_' + date
+        self.writeToCsvFile(fileName, linesFile)
+        print 'DATA WRITTEN TO CSV FILE'
+
+    def preapreLinesForCheckpointErrorsCsvFile(self, tList, counterDic):
+        for map_name in self.map:
+            tmpRow = [map_name]
+            tList.append(tmpRow)
+            for dataStatistic in self.STATISTIC_NAME:
+                tmpRow = [dataStatistic]
+                tList.append(tmpRow)
+                tmpRow = ['#,ERROR ERROR_PERCENT ERROR_COORDINATE']
+                tList.append(tmpRow)
+                tmpRow = ['#,X,Y,X,Y,X,Y']
+                tList.append(tmpRow)
+                for doc in counterDic[map_name]:
+                    tmpRow = [doc['CHECKPOINT'], doc['RESULTS'][dataStatistic]['ERROR']['X'], doc['RESULTS'][dataStatistic]['ERROR']['Y'], doc['RESULTS'][dataStatistic]['ERROR_PERCENT']['X'], doc['RESULTS'][dataStatistic]['ERROR_PERCENT']['Y'], doc['RESULTS'][dataStatistic]['ERROR_COORDINATE']['X'], doc['RESULTS'][dataStatistic]['ERROR_COORDINATE']['Y']]
+                    tList.append(tmpRow)
+    
+    def saveRangeApAndMagneticFingerprint(self):
+                
+        docs = {}
+        docs['RSSI'] = {}
+        for mac in self.mac_ap_distinct:
+            docs['RSSI'][mac] = {'docs': [], 'values': {}, 'max': {}, 'min': {}, 'mean': {}, 'std': {}, 'mode': {}, 'mediana': {}, 'covrage': {}}
+            for dataStatistic in self.STATISTIC_NAME:
+                docs['RSSI'][mac]['values'][dataStatistic] = []
+                docs['RSSI'][mac]['max'][dataStatistic] = 0
+                docs['RSSI'][mac]['min'][dataStatistic] = 0
+                docs['RSSI'][mac]['mean'][dataStatistic] = 0
+                docs['RSSI'][mac]['std'][dataStatistic] = 0
+                docs['RSSI'][mac]['mode'][dataStatistic] = {'value':0, 'accurance': 0}
+                docs['RSSI'][mac]['mediana'][dataStatistic] = 0
+                docs['RSSI'][mac]['covrage'][dataStatistic] = ''
+            cursor = self.coll_fingerprint.find({'RSSI_DATA': {'$exists': True}, 'MAC_AP': mac})
+            docs['RSSI'][mac]['docs'] = [res for res in cursor]
+            
+        
+        docs['MAGNETIC'] = {'docs': [], 'values': {}, 'max': {}, 'min': {}, 'mean': {}, 'std': {}, 'mode': {}, 'mediana': {}, 'covrage': {}}
+        for dataStatistic in self.STATISTIC_NAME:
+            docs['MAGNETIC']['values'][dataStatistic] = []
+            docs['MAGNETIC']['min'][dataStatistic] = 0
+            docs['MAGNETIC']['max'][dataStatistic] = 0
+            docs['MAGNETIC']['mean'][dataStatistic] = 0
+            docs['MAGNETIC']['std'][dataStatistic] = 0
+            docs['MAGNETIC']['mode'][dataStatistic] = {'value': 0, 'accurance': 0}
+            docs['MAGNETIC']['mediana'][dataStatistic] = 0
+            docs['MAGNETIC']['covrage'][dataStatistic] = ''
+            
+        cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}})
+        docs['MAGNETIC']['docs'] = [res for res in cursor]
+        
+        
+        
+        for mac in self.mac_ap_distinct:
+            for doc in docs['RSSI'][mac]['docs']:
+                for dataStatistic in self.STATISTIC_NAME:
+                    docs['RSSI'][mac]['values'][dataStatistic].append(doc['STATISTICS'][dataStatistic])
+        
+        for doc in docs['MAGNETIC']['docs']:
+                for dataStatistic in self.STATISTIC_NAME:
+                    docs['MAGNETIC']['values'][dataStatistic].append(doc['STATISTICS'][dataStatistic])
+                    
+                    
+        for mac in self.mac_ap_distinct:
+            for dataStatistic in self.STATISTIC_NAME:
+                docs['RSSI'][mac]['max'][dataStatistic] = (max(docs['RSSI'][mac]['values'][dataStatistic]))
+                docs['RSSI'][mac]['min'][dataStatistic] = (min(docs['RSSI'][mac]['values'][dataStatistic]))
+                docs['RSSI'][mac]['mean'][dataStatistic] = (np.mean(docs['RSSI'][mac]['values'][dataStatistic]))
+                docs['RSSI'][mac]['std'][dataStatistic] = (np.std(docs['RSSI'][mac]['values'][dataStatistic]))
+                tmp = list(scipy.stats.mode(docs['RSSI'][mac]['values'][dataStatistic]))
+                modeV = tmp[0].tolist()[0]
+                acc = tmp[1].tolist()[0]
+                docs['RSSI'][mac]['mode'][dataStatistic]['value'] = (modeV)
+                docs['RSSI'][mac]['mode'][dataStatistic]['accurance'] = (acc)
+                docs['RSSI'][mac]['mediana'][dataStatistic] = (np.median(docs['RSSI'][mac]['values'][dataStatistic]))
+                tmpString = str(len(docs['RSSI'][mac]['values'][dataStatistic])) + '/' + str((len(self.x_distinct) * (len(self.y_distinct))))
+                docs['RSSI'][mac]['covrage'][dataStatistic] = (tmpString)
+        
+        for dataStatistic in self.STATISTIC_NAME:
+            docs['MAGNETIC']['max'][dataStatistic] = (max(docs['MAGNETIC']['values'][dataStatistic]))
+            docs['MAGNETIC']['min'][dataStatistic] = (min(docs['MAGNETIC']['values'][dataStatistic]))
+            docs['MAGNETIC']['mean'][dataStatistic] = (np.mean(docs['MAGNETIC']['values'][dataStatistic]))
+            docs['MAGNETIC']['std'][dataStatistic] = (np.std(docs['MAGNETIC']['values'][dataStatistic]))
+            tmp = list(scipy.stats.mode(docs['MAGNETIC']['values'][dataStatistic]))
+            modeV = tmp[0].tolist()[0]
+            acc = tmp[1].tolist()[0]
+            docs['MAGNETIC']['mode'][dataStatistic]['value'] = (modeV)
+            docs['MAGNETIC']['mode'][dataStatistic]['accurance'] = (acc)
+            docs['MAGNETIC']['mediana'][dataStatistic] = (np.median(docs['MAGNETIC']['values'][dataStatistic]))
+            tmpString = str(len(docs['MAGNETIC']['values'][dataStatistic])) + '/' + str((len(self.x_distinct) * (len(self.y_distinct))))
+            docs['MAGNETIC']['covrage'][dataStatistic] = (tmpString)
+        
+        
+        
+        linesFile = []
+        self.preapreLinesForApAndMagneticRangeCsvFile(linesFile, docs)
+        date = str(datetime.now()).replace(' ','_')
+        date = date.replace(':','-')
+        fileName = self.collname + '_AP_MAGNETIC_RANGE_FINGERPRINT_' + date
+        self.writeToCsvFile(fileName, linesFile)
+        print 'DATA WRITTEN TO CSV FILE'
+                    
+    def preapreLinesForApAndMagneticRangeCsvFile(self,tList, counterDic):
+        for map_name in self.map:
+            tmpRow = [map_name]
+            tList.append(tmpRow)
+            for dataStatistic in self.STATISTIC_NAME:
+                tmpRow = [dataStatistic]
+                tList.append(tmpRow)
+                if map_name == 'RSSI':
+                    tmpRow = ['#,min,max,srednia,odchylenie_standardowe,moda-wartosc,moda-czestotliwosc,mediana,pokrycie_mapy']
+                    tList.append(tmpRow)
+                    for mac in self.mac_ap_distinct:
+                        tmpRow = [mac,counterDic[map_name][mac]['min'][dataStatistic], counterDic[map_name][mac]['max'][dataStatistic], counterDic[map_name][mac]['mean'][dataStatistic], counterDic[map_name][mac]['std'][dataStatistic], counterDic[map_name][mac]['mode'][dataStatistic]['value'], counterDic[map_name][mac]['mode'][dataStatistic]['accurance'], counterDic[map_name][mac]['mediana'][dataStatistic], counterDic[map_name][mac]['covrage'][dataStatistic]]
+                        tList.append(tmpRow)
+                elif map_name == 'MAGNETIC':
+                    tmpRow = ['min,max,srednia,odchylenie_standardowe,moda-wartosc,moda-czestotliwosc,mediana,pokrycie_mapy']
+                    tList.append(tmpRow)
+                    tmpRow = [counterDic[map_name]['min'][dataStatistic], counterDic[map_name]['max'][dataStatistic], counterDic[map_name]['mean'][dataStatistic], counterDic[map_name]['std'][dataStatistic], counterDic[map_name]['mode'][dataStatistic]['value'], counterDic[map_name]['mode'][dataStatistic]['accurance'], counterDic[map_name]['mediana'][dataStatistic], counterDic[map_name]['covrage'][dataStatistic]]
+                    tList.append(tmpRow)
+    
+    def showLocalizationErrorChoosePoints(self):
+        while(True):
+            choose = raw_input('Magnetic map(0) or RSSI map(1) or quit(q)?')
+            if choose == 'q':
+                break
+            dataStatistic = int(raw_input('All statistic - %s\n choose from 0 - %s' % (str(self.STATISTIC_NAME),len(self.STATISTIC_NAME) - 1)))
+            checkpointRange = raw_input('All checkpoints - %s\n choose 0-%s(a b ...)' % (str(self.distinctCp), len(self.distinctCp) - 1))
+            checkpointRange = checkpointRange.split(' ')
+
+            drawDict = {'NAME': [],'X': [], 'Y': [], 'X_ERROR': [], 'Y_ERROR': []}
+
+            if choose == '0':
+                for checkpoint in checkpointRange:
+                    cursor = self.coll.find({'CHECKPOINT' : checkpoint, 'FINGERPRINT_MAP': 'MAGNETIC'})
+                    docs = [res for res in cursor]
+                    for doc in docs:
+                        tmpDic = doc['RESULTS'][self.STATISTIC_NAME[dataStatistic]]
+                        drawDict['X'].append(tmpDic['X'])
+                        drawDict['Y'].append(tmpDic['Y'])
+                        drawDict['X_ERROR'].append(tmpDic['ERROR']['X'])
+                        drawDict['Y_ERROR'].append(tmpDic['ERROR']['Y'])
+                        drawDict['NAME'].append(checkpoint)
+                print drawDict['X']
+                print drawDict['Y']
+            elif choose == '1':
+                for checkpoint in checkpointRange:
+                    cursor = self.coll.find({'CHECKPOINT' : checkpoint, 'FINGERPRINT_MAP': 'RSSI'})
+                    docs = [res for res in cursor]
+                    for doc in docs:
+                        tmpDic = doc['RESULTS'][self.STATISTIC_NAME[dataStatistic]]
+                        drawDict['X'].append(tmpDic['X'])
+                        drawDict['Y'].append(tmpDic['Y'])
+                        drawDict['X_ERROR'].append(tmpDic['ERROR']['X'])
+                        drawDict['Y_ERROR'].append(tmpDic['ERROR']['Y'])
+                        drawDict['NAME'].append(checkpoint)
+                print drawDict['X']
+                print drawDict['Y']
+            fig, ax = plt.subplots()
+            anws = raw_input('Do you want errors on: only x(0), only y (1), x and y (2)')
+            if anws == '0':
+                ax.errorbar(drawDict['X'], drawDict['Y'], xerr=drawDict['X_ERROR'], fmt='o')
+            elif anws == '1':
+                ax.errorbar(drawDict['X'], drawDict['Y'], yerr = drawDict['Y_ERROR'], fmt='o')
+            elif anws == '2':
+                ax.errorbar(drawDict['X'], drawDict['Y'], xerr=drawDict['X_ERROR'], yerr = drawDict['Y_ERROR'], fmt='o')
+            for i in range(len(drawDict['X'])):
+                print drawDict['NAME'][i]
+                tmplist = [drawDict['X'][i],drawDict['Y'][i]]
+                tmpTuple = tuple(tmplist)
+                plt.annotate(drawDict['NAME'][i],xy=tmpTuple)
+            if choose == '1':
+                plt.title('RSSI')
+            elif choose == '0':
+                plt.title(u'POLE MAGNETYCZNE')
+            plt.xlim(0,max(self.x_distinct))
+            plt.ylim(0,max(self.y_distinct))
+            plt.xlabel(u'szerokość [m]')
+            plt.ylabel(u'długość [m]')
+            plt.show()
+
+################################################################################
     """method which helps in analyze of statistics from error"""
 
 def main():
@@ -899,7 +1139,10 @@ def main():
     4 - show error od x and y for certain data statistics
     5 - show chosen points, acctual position of checkpoint and localization
     6 - show number of checkpoints belowe given x and y error
-    7 - show RSSI value and magnetic field for ceratain refernce point and checkpoint '''
+    7 - show RSSI value and magnetic field for ceratain refernce point and checkpoint
+    8 - save checkpoints errors to csv file
+    9 - save range of values of each AP and magnetic field
+    10 - show localization error of checkpoint'''
     while(True):
         time.sleep(1)
         print msg
@@ -924,6 +1167,12 @@ def main():
             results.showNumberOfCheckPointsBeloweError()
         elif anw == '7':
             results.showRssiAndMagneticCheckpointLocate()
+        elif anw == '8':
+            results.saveAllCheckpointsErrorsToCsvFile()
+        elif anw == '9':
+            results.saveRangeApAndMagneticFingerprint()
+        elif anw == '10':
+            results.showLocalizationErrorChoosePoints()
 
 
 if __name__ == '__main__':

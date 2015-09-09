@@ -36,7 +36,9 @@ class Algorithms (object):
         self.STANDARD_DEVIATION_RSSI = 5
         self.GOOD_AP_LIST = ['f8:d1:11:48:9b:26', '68:7f:74:09:f6:8b', '28:80:23:28:7e:82', '28:80:23:28:7f:f0', '28:80:23:28:8a:1', '28:80:23:28:8a:b2', '14:cc:20:d1:51:04']
         self.COLL_RESULT_NAME = self.collName + self.ALGORITHM_CHOOSEPOINTS_NAME[self.choosenAlgorithmChoosePoints] + str(self.numberOfNeighbours) + '_distanceAlgorithm_' +self.ALGORITHM_DISTANCE_NAME[self.choosenAlgorithmDistance] + '_' + 'APLENGTH_' + str(len(self.GOOD_AP_LIST)) + '_' + os.path.basename(__file__).split('.')[0]
-        
+        self.STATISTIC_RSSI_EPSILON = 1
+        self.STATISTIC_MAGNETIC_EPSILON = 0.01
+        self.PROBABILITY_EPSILON = 0.0001
         
         self.x_distinct = None
         self.y_distinct = None
@@ -101,6 +103,7 @@ class Algorithms (object):
                 tmpDicAp = {}
                 tmpDicAp['X_FINGERPRINT'] = x
                 tmpDicAp['Y_FINGERPRINT'] = y
+                tmpDicAp['COUNTER'] = 0
 
                 tmpDicMagnetic = {}
                 tmpDicMagnetic['X_FINGERPRINT'] = x
@@ -361,17 +364,38 @@ class Algorithms (object):
         resultDic = {}
         self.resultDictonary(resultDic)
         for dataStatistic in self.STATISTIC_NAME:
-
+            name = 'SUM_DIFF_' + dataStatistic
             '''locating and counting error by RSSI map '''
             tmpListAp = resultDic['RSSI']['CHOSEN_POINTS'][dataStatistic]
-            t = resultDic['MAGNETIC']['CHOSEN_POINTS'][dataStatistic]
+            #t = resultDic['MAGNETIC']['CHOSEN_POINTS'][dataStatistic]
+            mainRatio = 0
+            if self.choosenAlgorithmDistance == 0:
+                for tRatio in tmpListAp:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.STATISTIC_RSSI_EPSILON
+                    mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
+            elif self.choosenAlgorithmDistance == 1:
+                for tRatio in tmpListAp:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.PROBABILITY_EPSILON
+                    mainRatio += float(pow(tRatio[name],self.numberOfNeighbours))
+                if mainRatio == 0:
+                    mainRatio = sys.float_info.min
+            ratioList = []
+            if self.choosenAlgorithmDistance == 0:
+                for tRatio in tmpListAp:
+                    ratioList.append(((1/pow(tRatio[name],self.numberOfNeighbours))/float(mainRatio)))
+            elif self.choosenAlgorithmDistance == 1:
+                for tRatio in tmpListAp:
+                    ratioList.append((pow(tRatio[name],self.numberOfNeighbours)/float(mainRatio)))
+            
             tmp = [0,0]
-            for coordinates in tmpListAp:
-                tmp[0] += coordinates['X_FINGERPRINT']
-                tmp[1] += coordinates['Y_FINGERPRINT']
+            for i in range(len(tmpListAp)):
+                tmp[0] += tmpListAp[i]['X_FINGERPRINT'] * ratioList[i]
+                tmp[1] += tmpListAp[i]['Y_FINGERPRINT'] * ratioList[i]
 
-            resultDic['RSSI']['RESULTS'][dataStatistic]['X'] = tmp[0]/float(len(tmpListAp))
-            resultDic['RSSI']['RESULTS'][dataStatistic]['Y'] = tmp[1]/float(len(tmpListAp))
+            resultDic['RSSI']['RESULTS'][dataStatistic]['X'] = tmp[0]
+            resultDic['RSSI']['RESULTS'][dataStatistic]['Y'] = tmp[1]
             resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['X'] = abs(resultDic['RSSI']['RESULTS'][dataStatistic]['X'] - resultDic['RSSI']['CHECKPOINT_COORDINATES']['X'])
             resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['Y'] = abs(resultDic['RSSI']['RESULTS'][dataStatistic]['Y'] - resultDic['RSSI']['CHECKPOINT_COORDINATES']['Y'])
             resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR_PERCENT']['X'] = (resultDic['RSSI']['RESULTS'][dataStatistic]['ERROR']['X']/resultDic['RSSI']['CHECKPOINT_COORDINATES']['X']) * 100
@@ -381,13 +405,37 @@ class Algorithms (object):
 
             '''locating and counting error by magnetic map '''
             tmpList = resultDic['MAGNETIC']['CHOSEN_POINTS'][dataStatistic]
+            
+            mainRatio = 0
+            if self.choosenAlgorithmDistance == 0:
+                for tRatio in tmpList:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.STATISTIC_MAGNETIC_EPSILON
+                    mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
+            elif self.choosenAlgorithmDistance == 1:
+                for tRatio in tmpList:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.PROBABILITY_EPSILON
+                    mainRatio += float(pow(tRatio[name],self.numberOfNeighbours))
+                if mainRatio == 0:
+                    mainRatio = sys.float_info.min
+                
+            ratioList = []
+            if self.choosenAlgorithmDistance == 0:
+                for tRatio in tmpList:
+                    ratioList.append(((1/pow(tRatio[name],self.numberOfNeighbours))/float(mainRatio)))
+            elif self.choosenAlgorithmDistance == 1:
+                for tRatio in tmpList:
+                    ratioList.append((pow(tRatio[name],self.numberOfNeighbours)/float(mainRatio)))
+            
             tmp = [0,0]
-            for coordinates in tmpList:
-                tmp[0] += coordinates['X_FINGERPRINT']
-                tmp[1] += coordinates['Y_FINGERPRINT']
-
-            resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] = tmp[0]/float(len(tmpList))
-            resultDic['MAGNETIC']['RESULTS'][dataStatistic]['Y'] = tmp[1]/float(len(tmpList))
+            for i in range(len(tmpList)):
+                tmp[0] += tmpListAp[i]['X_FINGERPRINT'] * ratioList[i]
+                tmp[1] += tmpListAp[i]['Y_FINGERPRINT'] * ratioList[i]
+            
+            #print ratio
+            resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] = tmp[0]
+            resultDic['MAGNETIC']['RESULTS'][dataStatistic]['Y'] = tmp[1]
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['X'] = abs(resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] - resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['X'])
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['Y'] = abs(resultDic['MAGNETIC']['RESULTS'][dataStatistic]['Y'] - resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['Y'])
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR_PERCENT']['X'] = (resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['X']/resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['X']) * 100
@@ -406,11 +454,11 @@ class Algorithms (object):
        fingerprintmap as statistics distance method counts it for RSSI map
        and magnetic map method counts diffrence beetween statistic data
        declared in STATISTIC_NAME'''
+    '''POPRAWIC SUME ROZNIC - TO /przez roznice powinno byc wyliczna na koncu przy wspolrzednych!!!!!!'''
     def statisticsDifference(self):
 
         '''get rssi, magnetic fingerprintmap and all data for certain checkpoint'''
-        magneticFingerprintDocs = self.collFingerprint.find({'MAGNETIC_DATA': {'$exists' : True}})
-        #rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
+        magneticFingerprintDocs = self.collFingerprint.find({'MAGNETIC_DATA': {'$exists' : True}}) 
         magneticLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'MAGNETIC_DATA': {'$exists' : True}})
         rssiLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'RSSI_DATA': {'$exists' : True}})
 
@@ -423,7 +471,6 @@ class Algorithms (object):
             for doc in tmp:
                 rssiFingerprintDocs.append(doc)
         
-        rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
         magneticLocateDocs = [res for res in magneticLocateDocs]
         rssiLocateDocs = [res for res in rssiLocateDocs]
 
@@ -481,9 +528,15 @@ class Algorithms (object):
         for doc in self.allDiff['RSSI']:
             for sumDoc in self.sumDiff['RSSI']:
                 if doc['X_FINGERPRINT'] == sumDoc['X_FINGERPRINT'] and doc['Y_FINGERPRINT'] == sumDoc['Y_FINGERPRINT']:
+                    sumDoc['COUNTER'] += 1
                     for dataStatistic in self.STATISTIC_NAME:
                         name = 'SUM_DIFF_' + dataStatistic
                         sumDoc[name] += doc[dataStatistic]
+                        
+        for sumDoc in self.sumDiff['RSSI']:
+            for dataStatistic in self.STATISTIC_NAME:
+                name = 'SUM_DIFF_' + dataStatistic
+                sumDoc[name] /= float(sumDoc['COUNTER'])
         print 'AFTER SUMING RSSI FINGERPRINT MAP'
 
         ''' suming magnetic data in certain points'''
@@ -563,8 +616,8 @@ class Algorithms (object):
                     locateDic[dataStatistic].append(doc)
             else:
                 locateDic[dataStatistic]= sorted(locateDic[dataStatistic], key=lambda x: x[name])
-                if locateDic[dataStatistic][-1][name] > doc[name]:
-                    locateDic[dataStatistic][-1] = doc
+                if locateDic[dataStatistic][0][name] > doc[name]:
+                    locateDic[dataStatistic][0] = doc
 ###############################################################################
     """probability implemetation"""
 
@@ -573,7 +626,6 @@ class Algorithms (object):
     def probabilityDiffrence(self):
         '''get rssi, magnetic fingerprintmap and all data for certain checkpoint'''
         magneticFingerprintDocs = self.collFingerprint.find({'MAGNETIC_DATA': {'$exists' : True}})
-        #rssiFingerprintDocs = self.collFingerprint.find({'RSSI_DATA': {'$exists' : True}})
         magneticLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'MAGNETIC_DATA': {'$exists' : True}})
         rssiLocateDocs = self.collLocate.find({'CHECKPOINT': self.currentCheckpoint, 'RSSI_DATA': {'$exists' : True}})
 
@@ -585,7 +637,6 @@ class Algorithms (object):
             tmp = [res for res in cursor]
             for doc in tmp:
                 rssiFingerprintDocs.append(doc)
-        #rssiFingerprintDocs = [res for res in rssiFingerprintDocs]
         magneticLocateDocs = [res for res in magneticLocateDocs]
         rssiLocateDocs = [res for res in rssiLocateDocs]
 
@@ -604,7 +655,7 @@ class Algorithms (object):
                     statisticsLocate = docLocate['STATISTICS']
                     statisticsFingerprint = docFingerprint['STATISTICS']
                     for dataStatistic in self.STATISTIC_NAME:
-                        tmpDiff = scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],self.STANDARD_DEVIATION_RSSI)
+                        tmpDiff = abs(scipy.stats.norm.cdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],self.STANDARD_DEVIATION_RSSI) - scipy.stats.norm.cdf((statisticsLocate[dataStatistic] - 1),statisticsFingerprint['MEAN'],self.STANDARD_DEVIATION_RSSI))
                         #print tmpDiff
                         #raw_input()
                         diff[dataStatistic] = tmpDiff
@@ -622,7 +673,7 @@ class Algorithms (object):
                 statisticsLocate = docLocate['STATISTICS_NORM']
                 statisticsFingerprint = docFingerprint['STATISTICS_NORM']
                 for dataStatistic in self.STATISTIC_NAME:
-                    tmpDiff = scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION'])
+                    tmpDiff = abs(scipy.stats.norm.pdf(statisticsLocate[dataStatistic],statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION']) - scipy.stats.norm.cdf((statisticsLocate[dataStatistic] - 1),statisticsFingerprint['MEAN'],statisticsFingerprint['STANDARD_DEVIATION']))
                     #print tmpDiff
                     #raw_input()
                     diff[dataStatistic] = tmpDiff
@@ -696,8 +747,8 @@ class Algorithms (object):
                     locateDic[dataStatistic].append(doc)
             else:
                 locateDic[dataStatistic]= sorted(locateDic[dataStatistic], key=lambda x: x[name])
-                if locateDic[dataStatistic][0][name] > doc[name]:
-                    locateDic[dataStatistic][0] = doc
+                if locateDic[dataStatistic][-1][name] > doc[name]:
+                    locateDic[dataStatistic][-1] = doc
 
 ###############################################################################
     """set of methods for debugging locating algorithm"""

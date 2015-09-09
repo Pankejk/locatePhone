@@ -1,0 +1,78 @@
+mainRatio = 0
+            if self.choosenAlgorithmDistance == 0:
+                for tRatio in tmpList:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.STATISTIC_MAGNETIC_EPSILON
+                    mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
+            elif self.choosenAlgorithmDistance == 1:
+                for tRatio in tmpList:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.PROBABILITY_EPSILON
+                    elif tRatio[name] < sys.float_info.min:
+                        tRatio[name] = sys.float_info.min
+                    power = pow(tRatio[name],self.numberOfNeighbours)
+                    if power == 0 or power < sys.float_info.min:
+                        power = sys.float_info.min
+                    mainRatio += 1/power
+                    print 'MAGNETIC - MAIN RATIO'
+                    print tRatio[name]
+                    print mainRatio
+                    raw_input()
+                
+            ratioList = []
+            for tRatio in tmpList:
+                print 'MAGNETIC - RATIO'
+                division = 1/float(mainRatio)
+                power = pow(tRatio[name],self.numberOfNeighbours)
+                if power == 0 or power < sys.float_info.min:
+                    power = sys.float_info.min
+                if division == 0 or division < sys.float_info.min:
+                    division = sys.float_info.min
+                
+                tmpRatio = 1/power/division
+                if tmpRatio == float('Inf'):
+                    tmpRatio = sys.float_info.max
+                
+                print mainRatio
+                print division
+                print tmpRatio
+                raw_input()
+                
+                ratioList.append(tmpRatio)
+
+
+
+mainRatio = 0
+            if self.choosenAlgorithmDistance == 0:
+                for tRatio in tmpListAp:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.STATISTIC_RSSI_EPSILON
+                    mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
+            elif self.choosenAlgorithmDistance == 1:
+                for tRatio in tmpListAp:
+                    if tRatio[name] == 0:
+                        tRatio[name] += self.PROBABILITY_EPSILON
+                    elif tRatio[name] < sys.float_info.min:
+                        tRatio[name] = sys.float_info.min
+                    power = pow(tRatio[name],self.numberOfNeighbours)
+                    if power == 0 or power < sys.float_info.min:
+                        power = sys.float_info.min
+                    mainRatio += 1/power
+            ratioList = []
+            for tRatio in tmpListAp:
+                division = 1/float(mainRatio)
+                power = pow(tRatio[name],self.numberOfNeighbours)
+                if power == 0 or power < sys.float_info.min:
+                    power = sys.float_info.min
+                if division == 0 or division < sys.float_info.min:
+                    division = sys.float_info.min
+                
+                tmpRatio = 1/power/division
+                if tmpRatio == float('Inf'):
+                    tmpRatio = sys.float_info.max
+                
+                ratioList.append(tmpRatio)
+
+
+
+

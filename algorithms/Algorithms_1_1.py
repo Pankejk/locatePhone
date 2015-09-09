@@ -378,10 +378,16 @@ class Algorithms (object):
                 for tRatio in tmpListAp:
                     if tRatio[name] == 0:
                         tRatio[name] += self.PROBABILITY_EPSILON
-                    mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
+                    mainRatio += float(pow(tRatio[name],self.numberOfNeighbours))
+                if mainRatio == 0:
+                    mainRatio = sys.float_info.min
             ratioList = []
-            for tRatio in tmpListAp:
-                ratioList.append(((1/pow(tRatio[name],self.numberOfNeighbours))/float(mainRatio)))
+            if self.choosenAlgorithmDistance == 0:
+                for tRatio in tmpListAp:
+                    ratioList.append(((1/pow(tRatio[name],self.numberOfNeighbours))/float(mainRatio)))
+            elif self.choosenAlgorithmDistance == 1:
+                for tRatio in tmpListAp:
+                    ratioList.append((pow(tRatio[name],self.numberOfNeighbours)/float(mainRatio)))
             
             tmp = [0,0]
             for i in range(len(tmpListAp)):
@@ -410,19 +416,23 @@ class Algorithms (object):
                 for tRatio in tmpList:
                     if tRatio[name] == 0:
                         tRatio[name] += self.PROBABILITY_EPSILON
-                    mainRatio += 1/float(pow(tRatio[name],self.numberOfNeighbours))
+                    mainRatio += float(pow(tRatio[name],self.numberOfNeighbours))
+                if mainRatio == 0:
+                    mainRatio = sys.float_info.min
                 
             ratioList = []
-            for tRatio in tmpList:
-                print tRatio
-                print mainRatio
-                raw_input()
-                ratioList.append(((1/pow(tRatio[name],self.numberOfNeighbours))/float(mainRatio)))
+            if self.choosenAlgorithmDistance == 0:
+                for tRatio in tmpList:
+                    ratioList.append(((1/pow(tRatio[name],self.numberOfNeighbours))/float(mainRatio)))
+            elif self.choosenAlgorithmDistance == 1:
+                for tRatio in tmpList:
+                    ratioList.append((pow(tRatio[name],self.numberOfNeighbours)/float(mainRatio)))
             
             tmp = [0,0]
             for i in range(len(tmpList)):
                 tmp[0] += tmpListAp[i]['X_FINGERPRINT'] * ratioList[i]
                 tmp[1] += tmpListAp[i]['Y_FINGERPRINT'] * ratioList[i]
+
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] = tmp[0]
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['Y'] = tmp[1]
             resultDic['MAGNETIC']['RESULTS'][dataStatistic]['ERROR']['X'] = abs(resultDic['MAGNETIC']['RESULTS'][dataStatistic]['X'] - resultDic['MAGNETIC']['CHECKPOINT_COORDINATES']['X'])
