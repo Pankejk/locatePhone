@@ -57,7 +57,9 @@ class CleanDataKopalniaFingerprint(object):
             doc2 = [res for res in cursor]
             cursor = self.coll.find({'X': 3, 'Y': y})
             doc3 = [res for res in cursor]
-
+            print len(doc1)
+            print len(doc2)
+            print len(doc3)
             if len(doc3) == 4 and len(doc1) == 4 and len(doc2) == 4:
                 for d in doc1:
                     self.coll_side_stats.save(d)
@@ -85,6 +87,8 @@ class CleanDataKopalniaFingerprint(object):
         deleteDocs = []
         for y in self.y_side_stat:
             for x in self.x_stat:
+                if x == 2:
+                    continue
                 cursor = self.coll.find({'Y': y, 'X': x})
                 docs = [res for res in cursor]
                 for doc in docs:
@@ -163,7 +167,7 @@ class CleanDataKopalniaFingerprint(object):
             statisticResult[y]['X3'] = tmpX['X3']
 
         print '!!!CAUTION THIS FUNCTION IS CREATING NOTHING AT ALL!!!'
-        msg = 'Which data statistic do ypu want to see?\n' + str(self.STATISTIC_NAME)
+        msg = 'Which data statistic do you want to see?\n' + str(self.STATISTIC_NAME)
         while(True):
             time.sleep(1)
             anws  = int(raw_input(msg))
@@ -178,7 +182,7 @@ class CleanDataKopalniaFingerprint(object):
                     for mac in self.mac_distinct:
                         print 'Y: ' + str(y) + ' X: ' + str(x) + ' AP: ' + mac + ' - diff = ' + str(statisticResult[y][tX][mac]['STATISTICS_DIFFERENCE'][self.STATISTIC_NAME[anws]])
 
-    """method draws hostogram for certain x and y anf for certain AP and magnetic data"""
+    """method draws hostogram for certain x and y and for certain AP and magnetic data"""
     def drawHistogramForSideStatistics(self, chooseY):
 
         docsX1 = []
@@ -312,7 +316,7 @@ class CleanDataKopalniaFingerprint(object):
         create histograms for side(5)
         draw histogram for all y coordinates(6)
         delete side statistic docs(7)
-        drop kopalanoa checkpoint collection in locate db(8)"""
+        drop kopalania checkpoint collection in locate db(8)"""
         while(True):
             time.sleep(1)
             anws = raw_input(msq)

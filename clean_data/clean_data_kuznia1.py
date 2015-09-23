@@ -8,7 +8,7 @@ conn = MongoClient()
 
 db_fingerprint = conn['fingerprint']
 #'kuznia1_DATASIZE_200_STEP_3_1_DEFAULT'
-coll_kuznia = db_fingerprint['kuznia1']
+coll_kuznia = db_fingerprint['kuznia2']
 
 def countStatisticsData(jsonFile):
         uniqueKeys = []
@@ -35,7 +35,7 @@ def countStatisticsData(jsonFile):
 
 
 
-os.system('mongoimport --db fingerprint --collection kuznia1 --file ../data-backup/kuznia1_DATASIZE_200_STEP_3_1_DEFAULT_fingerprint_2.07.15.json')
+os.system('mongoimport --db fingerprint --collection kuznia2 --file ../data-backup/kuznia1_DATASIZE_200_STEP_3_1_DEFAULT_fingerprint_2.07.15.json')
 count = 0
 docList=[]
 for document in coll_kuznia.find({}):

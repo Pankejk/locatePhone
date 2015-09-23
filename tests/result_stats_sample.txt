@@ -1,0 +1,111 @@
+def saveStatisticsSampleToCsvFile(self):
+        anwsDict = {}
+        anwsDict['RSSI'] = {}
+        anwsDict['MAGNETIC'] = {}
+        docs['RSSI'] = {}
+        docs['MAGNETIC'] = {}
+        
+        for dataStatistics in self.STATISTIC_NAME:
+            anwsDict['RSSI'][dataStatistics] ={}
+            anwsDict['MAGNETIC'][dataStatistics] ={}
+            docs['RSSI'][dataStatistics] ={}
+            docs['MAGNETIC'][dataStatistics] ={}
+            for y in self.y_sample_stat:
+                anwsDict['RSSI'][dataStatistics][y] = {}
+                anwsDcit['MAGNETIC'][dataStatistics][y] = 0
+                docs['RSSI'][dataStatistics][y] = {}
+                docs['MAGNETIC'][dataStatistics][y] = 0
+                for mac in self.mac_ap_distinct:
+                    anwsDict['RSSI'][dataStatistics][y][mac] = 0
+                    docs['RSSI'][dataStatistics][y][mac] = 0
+                    
+        
+        for y in self.y_sample_stat:
+            for mac in self.mac_ap_distinct:
+                cursor = self.coll_fingerprint.find({'MAC_AP': mac, 'Y': y})
+            tmpDocs = [res for res in cursor]
+            
+            for doc in tmpDocs:
+                for dataStatistics in self.STATISTIC_NAME:
+                    anwsDict['RSSI'][dataStatistics][y] = doc['STATISTICS'][dataStatistics]
+        
+        #for mac in self.mac_ap_distinct:
+        #    docs['RSSI'][mac] = {'docs': [], 'values': {}, 'max': {}, 'min': {}, 'mean': {}, 'std': {}, 'mode': {}, 'mediana': {}, 'covrage': {}}
+        #    for dataStatistic in self.STATISTIC_NAME:
+        #        docs['RSSI'][mac]['values'][dataStatistic] = []
+        #        docs['RSSI'][mac]['max'][dataStatistic] = 0
+        #        docs['RSSI'][mac]['min'][dataStatistic] = 0
+        #        docs['RSSI'][mac]['mean'][dataStatistic] = 0
+        #        docs['RSSI'][mac]['std'][dataStatistic] = 0
+        #        docs['RSSI'][mac]['mode'][dataStatistic] = {'value':0, 'accurance': 0}
+        #        docs['RSSI'][mac]['mediana'][dataStatistic] = 0
+        #        docs['RSSI'][mac]['covrage'][dataStatistic] = ''
+        #    cursor = self.coll_fingerprint.find({'RSSI_DATA': {'$exists': True}, 'MAC_AP': mac})
+        #    docs['RSSI'][mac]['docs'] = [res for res in cursor]
+            
+        
+        docs['MAGNETIC'] = {'docs': [], 'values': {}, 'max': {}, 'min': {}, 'mean': {}, 'std': {}, 'mode': {}, 'mediana': {}, 'covrage': {}}
+        #for dataStatistic in self.STATISTIC_NAME:
+        #    docs['MAGNETIC']['values'][dataStatistic] = []
+        #    docs['MAGNETIC']['min'][dataStatistic] = 0
+        #    docs['MAGNETIC']['max'][dataStatistic] = 0
+        #    docs['MAGNETIC']['mean'][dataStatistic] = 0
+        #    docs['MAGNETIC']['std'][dataStatistic] = 0
+        #    docs['MAGNETIC']['mode'][dataStatistic] = {'value': 0, 'accurance': 0}
+        #    docs['MAGNETIC']['mediana'][dataStatistic] = 0
+        #    docs['MAGNETIC']['covrage'][dataStatistic] = ''
+            
+        #cursor = self.coll_fingerprint.find({'MAGNETIC_DATA': {'$exists': True}})
+        #docs['MAGNETIC']['docs'] = [res for res in cursor]
+        
+        
+        
+        #for mac in self.mac_ap_distinct:
+        #    for doc in docs['RSSI'][mac]['docs']:
+        #        for dataStatistic in self.STATISTIC_NAME:
+        #            docs['RSSI'][mac]['values'][dataStatistic].append(doc['STATISTICS'][dataStatistic])
+        
+        #for doc in docs['MAGNETIC']['docs']:
+        #        for dataStatistic in self.STATISTIC_NAME:
+        #            docs['MAGNETIC']['values'][dataStatistic].append(doc['STATISTICS_NORM'][dataStatistic])
+                    
+                    
+        '''for mac in self.mac_ap_distinct:
+            for dataStatistic in self.STATISTIC_NAME:
+                docs['RSSI'][mac]['max'][dataStatistic] = (max(docs['RSSI'][mac]['values'][dataStatistic]))
+                docs['RSSI'][mac]['min'][dataStatistic] = (min(docs['RSSI'][mac]['values'][dataStatistic]))
+                docs['RSSI'][mac]['mean'][dataStatistic] = (np.mean(docs['RSSI'][mac]['values'][dataStatistic]))
+                docs['RSSI'][mac]['std'][dataStatistic] = (np.std(docs['RSSI'][mac]['values'][dataStatistic]))
+                tmp = list(scipy.stats.mode(docs['RSSI'][mac]['values'][dataStatistic]))
+                modeV = tmp[0].tolist()[0]
+                acc = tmp[1].tolist()[0]
+                docs['RSSI'][mac]['mode'][dataStatistic]['value'] = (modeV)
+                docs['RSSI'][mac]['mode'][dataStatistic]['accurance'] = (acc)
+                docs['RSSI'][mac]['mediana'][dataStatistic] = (np.median(docs['RSSI'][mac]['values'][dataStatistic]))
+                tmpString = str(len(docs['RSSI'][mac]['values'][dataStatistic])) + '/' + str((len(self.x_distinct) * (len(self.y_distinct))))
+                docs['RSSI'][mac]['covrage'][dataStatistic] = (tmpString)
+        
+        for dataStatistic in self.STATISTIC_NAME:
+            docs['MAGNETIC']['max'][dataStatistic] = (max(docs['MAGNETIC']['values'][dataStatistic]))
+            docs['MAGNETIC']['min'][dataStatistic] = (min(docs['MAGNETIC']['values'][dataStatistic]))
+            docs['MAGNETIC']['mean'][dataStatistic] = (np.mean(docs['MAGNETIC']['values'][dataStatistic]))
+            docs['MAGNETIC']['std'][dataStatistic] = (np.std(docs['MAGNETIC']['values'][dataStatistic]))
+            tmp = list(scipy.stats.mode(docs['MAGNETIC']['values'][dataStatistic]))
+            modeV = tmp[0].tolist()[0]
+            acc = tmp[1].tolist()[0]
+            docs['MAGNETIC']['mode'][dataStatistic]['value'] = (modeV)
+            docs['MAGNETIC']['mode'][dataStatistic]['accurance'] = (acc)
+            docs['MAGNETIC']['mediana'][dataStatistic] = (np.median(docs['MAGNETIC']['values'][dataStatistic]))
+            tmpString = str(len(docs['MAGNETIC']['values'][dataStatistic])) + '/' + str((len(self.x_distinct) * (len(self.y_distinct))))
+            docs['MAGNETIC']['covrage'][dataStatistic] = (tmpString)
+        
+        
+        
+        linesFile = []
+        self.preapreLinesForApAndMagneticRangeCsvFile(linesFile, docs)
+        date = str(datetime.now()).replace(' ','_')
+        date = date.replace(':','-')
+        fileName = self.collname + '_AP_MAGNETIC_RANGE_FINGERPRINT_' + date
+        self.writeToCsvFile(fileName, linesFile)
+        print 'DATA WRITTEN TO CSV FILE'
+        '''

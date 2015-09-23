@@ -8,6 +8,7 @@ import sys
 
 import csv
 from datetime import datetime
+import math
 
 import scipy.stats
 
@@ -38,6 +39,7 @@ class Results(object):
         self.y_distinct = self.coll_fingerprint.distinct('Y')
         self.x_distinct.sort()
         self.y_distinct.sort()
+        self.y_sample_stat = [0,20,40,60,80,100]
 
         self.checkPoints = {}
 
@@ -373,7 +375,7 @@ class Results(object):
             firstLineFile = [self.collname + '_' + map_name]
             tList.append(firstLineFile)
             for dataStatistics in self.STATISTIC_NAME:
-                tmpRow = [dataStatistics]
+                tmpRow = [dataStatistics.replace(' ','')]
                 tList.append(tmpRow)
                 tmpRow = ['#;X;Y;XY']
                 tList.append(tmpRow)
@@ -1002,7 +1004,7 @@ class Results(object):
         
         for doc in docs['MAGNETIC']['docs']:
                 for dataStatistic in self.STATISTIC_NAME:
-                    docs['MAGNETIC']['values'][dataStatistic].append(doc['STATISTICS'][dataStatistic])
+                    docs['MAGNETIC']['values'][dataStatistic].append(doc['STATISTICS_NORM'][dataStatistic])
                     
                     
         for mac in self.mac_ap_distinct:
@@ -1049,7 +1051,7 @@ class Results(object):
             tmpRow = [map_name]
             tList.append(tmpRow)
             for dataStatistic in self.STATISTIC_NAME:
-                tmpRow = [dataStatistic]
+                tmpRow = [dataStatistic.replace(' ','')]
                 tList.append(tmpRow)
                 if map_name == 'RSSI':
                     tmpRow = ['#,min,max,srednia,odchylenie_standardowe,moda-wartosc,moda-czestotliwosc,mediana,pokrycie_mapy']
@@ -1117,11 +1119,144 @@ class Results(object):
                 plt.title('RSSI')
             elif choose == '0':
                 plt.title(u'POLE MAGNETYCZNE')
+            plt.xlim(-2,max(self.x_distinct)+ 2)
+            plt.ylim(-15,max(self.y_distinct) + 8)
+            plt.xlabel(u'szerokość [m]')
+            plt.ylabel(u'długość [m]')
+            plt.show()
+            
+    def showLocalizationErrorChoosePointsKopalnia(self):
+        while(True):
+            choose = raw_input('Magnetic map(0) or RSSI map(1) or quit(q)?')
+            if choose == 'q':
+                break
+            dataStatistic = int(raw_input('All statistic - %s\n choose from 0 - %s' % (str(self.STATISTIC_NAME),len(self.STATISTIC_NAME) - 1)))
+            checkpointRange = raw_input('All checkpoints - %s\n choose 0-%s(a b ...)' % (str(self.distinctCp), len(self.distinctCp) - 1))
+            checkpointRange = checkpointRange.split(' ')
+            
+            
+            
+            drawDict = {'NAME_WYZNACZONE': [], 'NAME_CHECKPOINT': [],'CHECKPOINT_WYZNACZONE': [], 'REAL_POSTION': []}
+
+            if choose == '0':
+                for checkpoint in checkpointRange:
+                    cursor = self.coll.find({'CHECKPOINT' : checkpoint, 'FINGERPRINT_MAP': 'MAGNETIC'})
+                    docs = [res for res in cursor]
+                    for doc in docs:
+                        tmpDic = doc['RESULTS'][self.STATISTIC_NAME[dataStatistic]]
+                        drawDict['CHECKPOINT_WYZNACZONE'].append([tmpDic['X'],tmpDic['Y']])
+                        drawDict['NAME_WYZNACZONE'].append(checkpoint + '-W')
+                        drawDict['REAL_POSTION'].append([float(self.checkPoints[checkpoint]['X']),float(self.checkPoints[checkpoint]['Y'])])
+                        drawDict['NAME_CHECKPOINT'].append(checkpoint + '-R')
+            elif choose == '1':
+                for checkpoint in checkpointRange:
+                    cursor = self.coll.find({'CHECKPOINT' : checkpoint, 'FINGERPRINT_MAP': 'RSSI'})
+                    docs = [res for res in cursor]
+                    for doc in docs:
+                        tmpDic = doc['RESULTS'][self.STATISTIC_NAME[dataStatistic]]
+                        drawDict['CHECKPOINT_WYZNACZONE'].append([tmpDic['X'],tmpDic['Y']])
+                        drawDict['NAME_WYZNACZONE'].append(checkpoint + '-W')
+                        drawDict['REAL_POSTION'].append([float(self.checkPoints[checkpoint]['X']),float(self.checkPoints[checkpoint]['Y'])])
+                        drawDict['NAME_CHECKPOINT'].append(checkpoint + '-R')
+                        
+            if choose == '1':
+                plt.title('RSSI')
+            elif choose == '0':
+                plt.title(u'POLE MAGNETYCZNE')
+            
+            for i in range(len(drawDict['CHECKPOINT_WYZNACZONE'])):
+                print drawDict['REAL_POSTION'][i]
+                print drawDict['CHECKPOINT_WYZNACZONE'][i]
+                x = [drawDict['REAL_POSTION'][i][0],drawDict['CHECKPOINT_WYZNACZONE'][i][0]]
+                y = [drawDict['REAL_POSTION'][i][1],drawDict['CHECKPOINT_WYZNACZONE'][i][1]]
+                plt.plot(x, y)
+                tmpTuple = tuple(drawDict['REAL_POSTION'][i])
+                plt.annotate(drawDict['NAME_CHECKPOINT'][i],xy=tmpTuple)
+                tmpTuple = tuple(drawDict['CHECKPOINT_WYZNACZONE'][i])
+                plt.annotate(drawDict['NAME_WYZNACZONE'][i],xy=tmpTuple)
             plt.xlim(0,max(self.x_distinct))
             plt.ylim(0,max(self.y_distinct))
             plt.xlabel(u'szerokość [m]')
             plt.ylabel(u'długość [m]')
+            plt.show()        
+
+    def showLocalizationErrorChoosePointsKuznia(self):
+        while(True):
+            choose = raw_input('Magnetic map(0) or RSSI map(1) or quit(q)?')
+            if choose == 'q':
+                break
+            dataStatistic = int(raw_input('All statistic - %s\n choose from 0 - %s' % (str(self.STATISTIC_NAME),len(self.STATISTIC_NAME) - 1)))
+            checkpointRange = raw_input('All checkpoints - %s\n choose 0-%s(a b ...)' % (str(self.distinctCp), len(self.distinctCp) - 1))
+            checkpointRange = checkpointRange.split(' ')
+            
+            
+            
+            drawDict = {'NAME_WYZNACZONE': [], 'NAME_CHECKPOINT': [],'CHECKPOINT_WYZNACZONE': [], 'REAL_POSTION': [], 'RADIUS':[]}
+
+            if choose == '0':
+                for checkpoint in checkpointRange:
+                    cursor = self.coll.find({'CHECKPOINT' : checkpoint, 'FINGERPRINT_MAP': 'MAGNETIC'})
+                    docs = [res for res in cursor]
+                    for doc in docs:
+                        tmpDic = doc['RESULTS'][self.STATISTIC_NAME[dataStatistic]]
+                        drawDict['CHECKPOINT_WYZNACZONE'].append([tmpDic['X'],tmpDic['Y']])
+                        drawDict['NAME_WYZNACZONE'].append(checkpoint + '-W')
+                        drawDict['REAL_POSTION'].append([float(self.checkPoints[checkpoint]['X']),float(self.checkPoints[checkpoint]['Y'])])
+                        drawDict['NAME_CHECKPOINT'].append(checkpoint + '-R')
+                        drawDict['RADIUS'].append(math.sqrt((pow(tmpDic['ERROR']['X'],2) + pow(tmpDic['ERROR']['Y'],2))))
+            elif choose == '1':
+                for checkpoint in checkpointRange:
+                    cursor = self.coll.find({'CHECKPOINT' : checkpoint, 'FINGERPRINT_MAP': 'RSSI'})
+                    docs = [res for res in cursor]
+                    for doc in docs:
+                        tmpDic = doc['RESULTS'][self.STATISTIC_NAME[dataStatistic]]
+                        drawDict['CHECKPOINT_WYZNACZONE'].append([tmpDic['X'],tmpDic['Y']])
+                        drawDict['NAME_WYZNACZONE'].append(checkpoint + '-W')
+                        drawDict['REAL_POSTION'].append([float(self.checkPoints[checkpoint]['X']),float(self.checkPoints[checkpoint]['Y'])])
+                        drawDict['NAME_CHECKPOINT'].append(checkpoint + '-R')
+                        drawDict['RADIUS'].append(math.sqrt((pow(tmpDic['ERROR']['X'],2) + pow(tmpDic['ERROR']['Y'],2))))
+            if choose == '1':
+                plt.title('RSSI')
+            elif choose == '0':
+                plt.title(u'POLE MAGNETYCZNE')
+            
+            for i in range(len(drawDict['CHECKPOINT_WYZNACZONE'])):
+                print drawDict['REAL_POSTION'][i]
+                print drawDict['CHECKPOINT_WYZNACZONE'][i]
+                circle1=plt.Circle(tuple(drawDict['CHECKPOINT_WYZNACZONE'][i]),drawDict['RADIUS'][1],fill=False)
+                fig = plt.gcf()
+                fig.gca().add_artist(circle1)
+                
+                tmpTuple = tuple(drawDict['REAL_POSTION'][i])
+                plt.annotate(drawDict['NAME_CHECKPOINT'][i],xy=tmpTuple)
+                tmpTuple = tuple(drawDict['CHECKPOINT_WYZNACZONE'][i])
+                plt.annotate(drawDict['NAME_WYZNACZONE'][i],xy=tmpTuple)
+            plt.xlim(0,max(self.x_distinct) + 10)
+            plt.ylim(0,max(self.y_distinct))
+            plt.xlabel(u'szerokość [m]')
+            plt.ylabel(u'długość [m]')
             plt.show()
+            
+    def drawChecpointsOnMap(self):
+        drawDict = {'NAME': [], 'X': [],'Y': []}
+        
+        plt.title(u'CHODNIK KOPALNI')
+        
+        for checpoint in self.distinctCp:
+            drawDict['NAME'].append(checpoint)
+            drawDict['X'].append(float(self.checkPoints[checpoint]['X']))
+            drawDict['Y'].append(float(self.checkPoints[checpoint]['Y']))
+            
+        for i in range(len(drawDict['NAME'])):
+            plt.plot(drawDict['X'][i], drawDict['Y'][i])
+            tmpTuple = tuple([drawDict['X'][i],drawDict['Y'][i]])
+            plt.annotate(drawDict['NAME'][i],xy=tmpTuple)
+        plt.xlim(0,max(self.x_distinct))
+        plt.ylim(0,max(self.y_distinct))
+        plt.xlabel(u'szerokość [m]')
+        plt.ylabel(u'długość [m]')
+        plt.show()
+
 
 ################################################################################
     """method which helps in analyze of statistics from error"""
@@ -1142,7 +1277,11 @@ def main():
     7 - show RSSI value and magnetic field for ceratain refernce point and checkpoint
     8 - save checkpoints errors to csv file
     9 - save range of values of each AP and magnetic field
-    10 - show localization error of checkpoint'''
+    10 - show localization error of checkpoint
+    11 - show localization error of checkpoint - kopalnia
+    12 - show localization error of checkpoint - kuznia
+    13 - schowcheckpoints on map
+    '''
     while(True):
         time.sleep(1)
         print msg
@@ -1173,6 +1312,12 @@ def main():
             results.saveRangeApAndMagneticFingerprint()
         elif anw == '10':
             results.showLocalizationErrorChoosePoints()
+        elif anw == '11':
+            results.showLocalizationErrorChoosePointsKopalnia()
+        elif anw == '12':
+            results.showLocalizationErrorChoosePointsKuznia()
+        elif anw == '13':
+            results.drawChecpointsOnMap()
 
 
 if __name__ == '__main__':

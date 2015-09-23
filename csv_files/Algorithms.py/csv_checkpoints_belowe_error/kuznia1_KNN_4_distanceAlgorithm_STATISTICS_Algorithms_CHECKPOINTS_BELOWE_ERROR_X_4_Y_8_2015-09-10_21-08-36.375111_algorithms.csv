@@ -1,0 +1,102 @@
+kuznia1_KNN_4_distanceAlgorithm_STATISTICS_Algorithms_MAGNETIC
+MEAN
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 29/49 16/49 16/49
+PROCENT_PUNKTOW_ODNIESIENIA 59.183673469387756 32.6530612244898 32.6530612244898
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,n,o,9,v,x,y,7,aa,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,an,ao,ap,8,1,4,5, a,n,7,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,ap,4, a,n,7,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,ap,4,
+MAX
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 27/49 13/49 13/49
+PROCENT_PUNKTOW_ODNIESIENIA 55.10204081632652 26.53061224489796 26.53061224489796
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,n,9,v,x,y,7,aa,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,an,ap,8,1,4,5, a,9,7,ab,11,ad,3,ag,ah,ai,am,ap,5, a,9,7,ab,11,ad,3,ag,ah,ai,am,ap,5,
+MIN
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 28/49 17/49 17/49
+PROCENT_PUNKTOW_ODNIESIENIA 57.14285714285714 34.69387755102041 34.69387755102041
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,n,v,x,y,7,aa,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,an,ao,ap,8,12,1,4,5, a,n,7,ab,ac,11,ad,ae,3,ag,ai,aj,am,ap,12,4,5, a,n,7,ab,ac,11,ad,ae,3,ag,ai,aj,am,ap,12,4,5,
+MEDIANA
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 27/49 14/49 14/49
+PROCENT_PUNKTOW_ODNIESIENIA 55.10204081632652 28.57142857142857 28.57142857142857
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,n,v,x,y,7,aa,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,an,ao,ap,8,1,4,5, a,n,7,ab,ac,ad,3,ag,ah,ai,aj,am,ap,4, a,n,7,ab,ac,ad,3,ag,ah,ai,aj,am,ap,4,
+MODE
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 29/49 12/49 12/49
+PROCENT_PUNKTOW_ODNIESIENIA 59.183673469387756 24.489795918367346 24.489795918367346
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,n,9,v,x,y,7,aa,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,an,ao,ap,8,12,1,4,5, a,9,7,ab,ac,11,3,ag,ai,am,ap,4, a,9,7,ab,ac,11,3,ag,ai,am,ap,4,
+PERCENTILE-10
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 28/49 16/49 16/49
+PROCENT_PUNKTOW_ODNIESIENIA 57.14285714285714 32.6530612244898 32.6530612244898
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,n,o,9,v,x,y,7,aa,ab,ac,11,ad,3,ag,ah,ai,aj,am,an,ao,ap,8,1,4,5, a,n,o,7,ab,11,ad,3,ag,ah,ai,aj,am,ap,4,5, a,n,o,7,ab,11,ad,3,ag,ah,ai,aj,am,ap,4,5,
+PERCENTILE-20
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 28/49 17/49 17/49
+PROCENT_PUNKTOW_ODNIESIENIA 57.14285714285714 34.69387755102041 34.69387755102041
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,n,9,v,x,y,7,aa,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,an,ao,ap,8,1,4,5, a,n,9,7,ab,ac,11,ad,3,ag,ah,ai,aj,am,ap,4,5, a,n,9,7,ab,ac,11,ad,3,ag,ah,ai,aj,am,ap,4,5,
+PERCENTILE-50
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 27/49 14/49 14/49
+PROCENT_PUNKTOW_ODNIESIENIA 55.10204081632652 28.57142857142857 28.57142857142857
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,n,v,x,y,7,aa,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,an,ao,ap,8,1,4,5, a,n,7,ab,ac,ad,3,ag,ah,ai,aj,am,ap,4, a,n,7,ab,ac,ad,3,ag,ah,ai,aj,am,ap,4,
+PERCENTILE-70
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 29/49 14/49 14/49
+PROCENT_PUNKTOW_ODNIESIENIA 59.183673469387756 28.57142857142857 28.57142857142857
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,j,n,9,v,x,y,7,aa,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,an,ao,ap,8,1,4,5, a,j,7,ab,ac,ad,3,ag,ah,ai,aj,am,ap,5, a,j,7,ab,ac,ad,3,ag,ah,ai,aj,am,ap,5,
+PERCENTILE-90
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 26/49 16/49 16/49
+PROCENT_PUNKTOW_ODNIESIENIA 53.06122448979592 32.6530612244898 32.6530612244898
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,n,v,x,y,7,aa,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,an,ap,8,1,4,5, a,n,7,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,ap,5, a,n,7,ab,ac,11,ad,ae,3,ag,ah,ai,aj,am,ap,5,
+kuznia1_KNN_4_distanceAlgorithm_STATISTICS_Algorithms_RSSI
+MEAN
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 33/49 22/49 22/49
+PROCENT_PUNKTOW_ODNIESIENIA 67.3469387755102 44.89795918367347 44.89795918367347
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,i,k,9,s,v,x,7,aa,ab,13,ac,11,ae,3,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,4,5, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,
+MAX
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 33/49 22/49 22/49
+PROCENT_PUNKTOW_ODNIESIENIA 67.3469387755102 44.89795918367347 44.89795918367347
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,i,k,9,s,v,x,7,aa,ab,13,ac,11,ae,3,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,4,5, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,
+MIN
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 33/49 22/49 22/49
+PROCENT_PUNKTOW_ODNIESIENIA 67.3469387755102 44.89795918367347 44.89795918367347
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,i,k,9,s,v,x,7,aa,ab,13,ac,11,ae,3,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,4,5, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,
+MEDIANA
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 33/49 22/49 22/49
+PROCENT_PUNKTOW_ODNIESIENIA 67.3469387755102 44.89795918367347 44.89795918367347
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,i,k,9,s,v,x,7,aa,ab,13,ac,11,ae,3,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,4,5, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,
+MODE
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 33/49 22/49 22/49
+PROCENT_PUNKTOW_ODNIESIENIA 67.3469387755102 44.89795918367347 44.89795918367347
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,i,k,9,s,v,x,7,aa,ab,13,ac,11,ae,3,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,4,5, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,
+PERCENTILE-10
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 33/49 22/49 22/49
+PROCENT_PUNKTOW_ODNIESIENIA 67.3469387755102 44.89795918367347 44.89795918367347
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,i,k,9,s,v,x,7,aa,ab,13,ac,11,ae,3,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,4,5, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,
+PERCENTILE-20
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 33/49 22/49 22/49
+PROCENT_PUNKTOW_ODNIESIENIA 67.3469387755102 44.89795918367347 44.89795918367347
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,i,k,9,s,v,x,7,aa,ab,13,ac,11,ae,3,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,4,5, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,
+PERCENTILE-50
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 33/49 22/49 22/49
+PROCENT_PUNKTOW_ODNIESIENIA 67.3469387755102 44.89795918367347 44.89795918367347
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,i,k,9,s,v,x,7,aa,ab,13,ac,11,ae,3,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,4,5, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,
+PERCENTILE-70
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 33/49 22/49 22/49
+PROCENT_PUNKTOW_ODNIESIENIA 67.3469387755102 44.89795918367347 44.89795918367347
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,i,k,9,s,v,x,7,aa,ab,13,ac,11,ae,3,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,4,5, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,
+PERCENTILE-90
+#;X;Y;XY
+LICZBA_PUNKTOW_ODNIESIENIA 33/49 22/49 22/49
+PROCENT_PUNKTOW_ODNIESIENIA 67.3469387755102 44.89795918367347 44.89795918367347
+LISTA_PUNKTOW_ODNIESIENIA a,b,c,i,k,9,s,v,x,7,aa,ab,13,ac,11,ae,3,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,4,5, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2, a,c,k,s,7,aa,ac,11,ae,ag,ah,ai,aj,ak,al,am,an,ao,ap,8,1,2,

@@ -299,21 +299,24 @@ class DrawFingerprint(object):
         postions = postions.split(' ')
         postions[0] = int(postions[0])
         postions[1] = int(postions[1])
-        
+        #print postions
         cursor = self.coll.find({'MAGNETIC_DATA' : {'$exists': True}, 'X': postions[0], 'Y': postions[1]})
         docs = [res for res in cursor]
         
+        print len(docs)
+        print len(docs[0]['MAGNETIC_DATA'])
         valueList = []
         for doc in docs:
             for value in doc['MAGNETIC_DATA_NORM']:
                 valueList.append(value)
         
         valueList = np.asarray(valueList)
+        print len(valueList)
         plt.hist(valueList, histtype='stepfilled')
         plt.title("Histogram - x= %s,y= %s - POLE MAGNETYCZNE" % (postions[0],postions[1]))
         plt.xlabel(u"Wartość [μT]")
         plt.ylabel(u"Częstotliwość")
-        plt.ylim(0,5)
+        plt.ylim(0,280)
         plt.show()
         
         
@@ -333,7 +336,7 @@ class DrawFingerprint(object):
         for doc in docs:
             for value in doc['RSSI_DATA']:
                 valueList.append(value)
-        
+        print valueList
         valueList = np.asarray(valueList)
         plt.hist(valueList, histtype='stepfilled')
         plt.title("Histogram - x= %s,y= %s - RSSI - %s" % (postions[0],postions[1], mac))
@@ -674,8 +677,8 @@ class DrawFingerprint(object):
         
         for dic in positionMagneticAnws:
             print 'X: ' + str(dic['X']) + ', Y: ' + str(dic['Y']) + ' - statistic: ' + str(dic['TEST_ANWS']['statistic']) + ', pvalue: ' + str(dic['TEST_ANWS']['pvalue'])
-            print 
-        
+            print
+
         
 ###############################################################################
     def menu(self):
